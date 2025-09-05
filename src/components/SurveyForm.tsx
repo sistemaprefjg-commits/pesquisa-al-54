@@ -197,11 +197,11 @@ const SurveyForm = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex flex-col">
       {/* Header com progresso */}
-      <div className="w-full p-4 md:p-6">
+      <div className="w-full p-3 md:p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
             <div className="flex items-center gap-2 md:gap-3">
-              <Heart className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+              <Heart className="h-4 w-4 md:h-6 md:w-6 text-primary" />
               <span className="text-xs md:text-sm font-medium text-muted-foreground">
                 Pesquisa de Satisfação
               </span>
@@ -215,29 +215,29 @@ const SurveyForm = () => {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex items-start md:items-center justify-center px-4 md:px-6 pb-4 md:pb-6 pt-2 md:pt-0">
+      <div className="flex-1 flex items-start justify-center px-3 md:px-6 pb-3 md:pb-6">
         <div className="w-full max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-6 md:space-y-12">
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-12">
             {/* Container da pergunta com animação */}
             <div className="animate-fade-in">
               {/* Pergunta de informações pessoais */}
               {currentQuestion.type === "info" && (
-                <div className="text-center space-y-6 md:space-y-8">
-                  <div className="space-y-3 md:space-y-4">
-                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground">
+                <div className="text-center space-y-4 md:space-y-8">
+                  <div className="space-y-2 md:space-y-4">
+                    <h1 className="text-xl md:text-4xl lg:text-5xl font-bold text-foreground">
                       {currentQuestion.title}
                     </h1>
-                    <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
+                    <p className="text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto px-4">
                       Responda rapidamente para nos ajudar a melhorar nossos serviços
                     </p>
                   </div>
                   
-                  <div className="max-w-md mx-auto space-y-4 md:space-y-6 px-4">
+                  <div className="max-w-md mx-auto space-y-3 md:space-y-6 px-4">
                     {currentQuestion.fields.map((field, index) => (
-                      <div key={field.key} className="space-y-2">
+                      <div key={field.key} className="space-y-1 md:space-y-2">
                         <Label 
                           htmlFor={field.key} 
-                          className="text-base md:text-lg font-medium text-left block"
+                          className="text-sm md:text-lg font-medium text-left block"
                         >
                           {field.label}
                           {field.required && <span className="text-destructive ml-1">*</span>}
@@ -248,7 +248,7 @@ const SurveyForm = () => {
                           value={formData[field.key as keyof typeof formData]}
                           onChange={(e) => handleInputChange(field.key, e.target.value)}
                           required={field.required}
-                          className="text-base md:text-lg p-3 md:p-4 h-12 md:h-14"
+                          className="text-sm md:text-lg p-2.5 md:p-4 h-10 md:h-14"
                           autoFocus={index === 0}
                         />
                       </div>
@@ -259,12 +259,12 @@ const SurveyForm = () => {
 
               {/* Pergunta de múltipla escolha */}
               {currentQuestion.type === "radio" && (
-                <div className="text-center space-y-4 md:space-y-8">
-                  <div className="space-y-2 md:space-y-4 px-4">
+                <div className="text-center space-y-3 md:space-y-8">
+                  <div className="space-y-1 md:space-y-4 px-4">
                     <div className="text-xs md:text-sm font-medium text-primary uppercase tracking-wider">
                       {currentQuestion.title}
                     </div>
-                    <h1 className="text-lg md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight">
+                    <h1 className="text-base md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight">
                       {currentQuestion.question}
                     </h1>
                   </div>
@@ -273,7 +273,7 @@ const SurveyForm = () => {
                     <RadioGroup
                       value={formData[currentQuestion.id as keyof typeof formData]}
                       onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
-                      className="space-y-2 md:space-y-4"
+                      className="space-y-1.5 md:space-y-4"
                     >
                       {currentQuestion.options.map((option, index) => {
                         const optionValue = typeof option === 'object' ? option.value : option;
@@ -296,18 +296,18 @@ const SurveyForm = () => {
                             />
                             <Label 
                               htmlFor={`${currentQuestion.id}-${index}`}
-                              className="flex items-center justify-between w-full p-3 md:p-6 text-left border-2 border-border rounded-lg md:rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary group-hover:scale-[1.01] md:group-hover:scale-[1.02]"
+                              className="flex items-center justify-between w-full p-2.5 md:p-6 text-left border-2 border-border rounded-lg md:rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary group-hover:scale-[1.01] md:group-hover:scale-[1.02]"
                             >
                               <div className="flex items-center gap-2 md:gap-4">
-                                <div className="text-base md:text-2xl font-bold text-muted-foreground peer-checked:text-primary transition-colors min-w-[24px] md:min-w-[32px]">
+                                <div className="text-sm md:text-2xl font-bold text-muted-foreground peer-checked:text-primary transition-colors min-w-[20px] md:min-w-[32px]">
                                   {String.fromCharCode(65 + index)}
                                 </div>
-                                <div className="flex items-center gap-2 md:gap-3">
-                                  {optionIcon && <span className="text-lg md:text-2xl">{optionIcon}</span>}
-                                  <span className="text-sm md:text-lg font-medium">{optionLabel}</span>
+                                <div className="flex items-center gap-1.5 md:gap-3">
+                                  {optionIcon && <span className="text-base md:text-2xl">{optionIcon}</span>}
+                                  <span className="text-xs md:text-lg font-medium">{optionLabel}</span>
                                 </div>
                               </div>
-                              <ArrowRight className="h-4 w-4 md:h-5 md:w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <ArrowRight className="h-3 w-3 md:h-5 md:w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </Label>
                           </div>
                         );
@@ -319,22 +319,22 @@ const SurveyForm = () => {
 
               {/* Pergunta de texto livre */}
               {currentQuestion.type === "textarea" && (
-                <div className="text-center space-y-6 md:space-y-8">
-                  <div className="space-y-3 md:space-y-4 px-4">
-                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground">
+                <div className="text-center space-y-4 md:space-y-8">
+                  <div className="space-y-2 md:space-y-4 px-4">
+                    <h1 className="text-xl md:text-4xl lg:text-5xl font-bold text-foreground">
                       {currentQuestion.title}
                     </h1>
-                    <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+                    <p className="text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto">
                       Seus comentários são muito importantes para nós
                     </p>
                   </div>
                   
-                  <div className="max-w-2xl mx-auto space-y-6 md:space-y-8 px-4">
+                  <div className="max-w-2xl mx-auto space-y-4 md:space-y-8 px-4">
                     {currentQuestion.fields.map((field) => (
-                      <div key={field.key} className="space-y-3 md:space-y-4">
+                      <div key={field.key} className="space-y-2 md:space-y-4">
                         <Label 
                           htmlFor={field.key} 
-                          className="text-lg md:text-xl font-medium block"
+                          className="text-base md:text-xl font-medium block"
                         >
                           {field.label}
                         </Label>
@@ -343,7 +343,7 @@ const SurveyForm = () => {
                           placeholder={field.placeholder}
                           value={formData[field.key as keyof typeof formData]}
                           onChange={(e) => handleInputChange(field.key, e.target.value)}
-                          className="min-h-[100px] md:min-h-[120px] text-base md:text-lg p-3 md:p-4 resize-none"
+                          className="min-h-[80px] md:min-h-[120px] text-sm md:text-lg p-2.5 md:p-4 resize-none"
                           autoFocus
                         />
                       </div>
@@ -354,34 +354,34 @@ const SurveyForm = () => {
             </div>
 
             {/* Navegação */}
-            <div className="flex justify-center px-4">
-              <div className="flex gap-3 md:gap-4 max-w-md w-full">
+            <div className="flex justify-center px-4 mt-4 md:mt-0">
+              <div className="flex gap-2 md:gap-4 max-w-md w-full">
                 {currentStep > 0 && (
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={handlePrevious}
-                    className="px-4 md:px-8 py-2.5 md:py-3 text-sm md:text-base"
+                    className="px-3 md:px-8 py-2 md:py-3 text-xs md:text-base"
                   >
-                    <ChevronLeft className="mr-1 md:mr-2 h-4 w-4" />
+                    <ChevronLeft className="mr-1 md:mr-2 h-3 w-3 md:h-4 md:w-4" />
                     Anterior
                   </Button>
                 )}
                 
                 <Button 
                   type="submit" 
-                  className="flex-1 px-4 md:px-8 py-2.5 md:py-3 text-sm md:text-base"
+                  className="flex-1 px-3 md:px-8 py-2 md:py-3 text-xs md:text-base"
                   disabled={!canProceed()}
                 >
                   {isLastStep ? (
                     <>
-                      <Send className="mr-1 md:mr-2 h-4 md:h-5 w-4 md:w-5" />
-                      Enviar Avaliação
+                      <Send className="mr-1 md:mr-2 h-3 w-3 md:h-5 md:w-5" />
+                      Enviar
                     </>
                   ) : (
                     <>
                       {canProceed() ? 'Continuar' : 'Selecione uma opção'}
-                      {canProceed() && <ChevronRight className="ml-1 md:ml-2 h-4 w-4" />}
+                      {canProceed() && <ChevronRight className="ml-1 md:ml-2 h-3 w-3 md:h-4 md:w-4" />}
                     </>
                   )}
                 </Button>
@@ -391,9 +391,9 @@ const SurveyForm = () => {
 
           {/* Dica de navegação */}
           {canProceed() && !isLastStep && (
-            <div className="text-center mt-6 md:mt-8 px-4">
+            <div className="text-center mt-3 md:mt-8 px-4">
               <p className="text-xs md:text-sm text-muted-foreground">
-                💡 Pressione <kbd className="px-1.5 md:px-2 py-0.5 md:py-1 bg-muted rounded text-xs font-mono">Enter</kbd> para continuar
+                💡 Pressione <kbd className="px-1 md:px-2 py-0.5 md:py-1 bg-muted rounded text-xs font-mono">Enter</kbd> para continuar
               </p>
             </div>
           )}
