@@ -7,10 +7,16 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Heart, Send, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const SurveyForm = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
+  const [surveyData, setSurveyData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     satisfaction: "",
     service: "",
@@ -25,6 +31,35 @@ const SurveyForm = () => {
     phone: "",
     neighborhood: ""
   });
+
+  useEffect(() => {
+    loadActiveSurvey();
+  }, []);
+
+  const loadActiveSurvey = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('surveys')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('Error loading survey:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar pesquisa. Usando formulário padrão.",
+          variant: "destructive"
+        });
+      } else {
+        setSurveyData(data);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const questions = [
     {
@@ -133,14 +168,84 @@ const SurveyForm = () => {
   const totalSteps = questions.length;
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const calculateSatisfactionScore = () => {
+    const ratings = [
+      parseInt(formData.satisfaction) || 0,
+      getNumericRating(formData.service),
+      getNumericRating(formData.professionalCare),
+      getNumericRating(formData.waiting),
+      getNumericRating(formData.cleanliness),
+      getNumericRating(formData.recommendation)
+    ].filter(rating => rating > 0);
+
+    return ratings.length > 0 ? Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) : 3;
+  };
+
+  const getNumericRating = (value: string) => {
+    const ratingMap: { [key: string]: number } = {
+      'Excelente': 5, 'Sim, com certeza': 5, 'Muito rápido (0-15 min)': 5,
+      'Bom': 4, 'Sim, provavelmente': 4, 'Rápido (16-30 min)': 4,
+      'Regular': 3, 'Talvez': 3, 'Moderado (31-60 min)': 3,
+      'Ruim': 2, 'Provavelmente não': 2, 'Demorado (1-2 horas)': 2,
+      'Péssimo': 1, 'Definitivamente não': 1, 'Muito demorado (+2 horas)': 1
+    };
+    return ratingMap[value] || 3;
+  };
+
+  const saveResponse = async () => {
+    setIsSubmitting(true);
+    try {
+      const responses = {
+        atendimento: formData.satisfaction,
+        qualidade_servico: formData.service,
+        atendimento_profissionais: formData.professionalCare,
+        tempo_espera: formData.waiting,
+        limpeza: formData.cleanliness,
+        recomendaria: formData.recommendation,
+        comentarios: formData.complaints,
+        sugestoes: formData.suggestions,
+        bairro: formData.neighborhood
+      };
+
+      const { error } = await supabase
+        .from('survey_responses')
+        .insert({
+          survey_id: surveyData?.id,
+          patient_name: formData.patientName || 'Anônimo',
+          patient_phone: formData.phone,
+          responses: responses,
+          satisfaction_score: calculateSatisfactionScore()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Obrigado!",
+        description: "Sua pesquisa foi enviada com sucesso.",
+      });
+      
+      navigate('/survey-success');
+    } catch (error) {
+      console.error('Error saving response:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar resposta. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Submeter pesquisa
-      navigate('/survey-success');
+      await saveResponse();
     }
   };
 
@@ -185,14 +290,25 @@ const SurveyForm = () => {
         if (currentStep < totalSteps - 1) {
           setCurrentStep(currentStep + 1);
         } else {
-          navigate('/survey-success');
+          saveResponse();
         }
       }
     };
 
     window.addEventListener('keypress', handleKeyPress);
     return () => window.removeEventListener('keypress', handleKeyPress);
-  }, [currentStep, canProceed, navigate, totalSteps]);
+  }, [currentStep, canProceed, totalSteps]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex items-center justify-center">
+        <div className="text-center">
+          <Heart className="h-8 w-8 mx-auto text-primary animate-pulse mb-4" />
+          <p>Carregando pesquisa...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex flex-col">
@@ -371,12 +487,12 @@ const SurveyForm = () => {
                 <Button 
                   type="submit" 
                   className="flex-1 px-3 md:px-8 py-2 md:py-3 text-xs md:text-base"
-                  disabled={!canProceed()}
+                  disabled={!canProceed() || isSubmitting}
                 >
                   {isLastStep ? (
                     <>
                       <Send className="mr-1 md:mr-2 h-3 w-3 md:h-5 md:w-5" />
-                      Enviar
+                      {isSubmitting ? 'Enviando...' : 'Enviar'}
                     </>
                   ) : (
                     <>

@@ -1,54 +1,72 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const SurveyStats = () => {
-  const satisfactionData = [
-    { level: "Muito Satisfeito", count: 342, percentage: 38, color: "bg-success" },
-    { level: "Satisfeito", count: 289, percentage: 32, color: "bg-primary" },
-    { level: "Regular", count: 178, percentage: 20, color: "bg-warning" },
-    { level: "Insatisfeito", count: 67, percentage: 8, color: "bg-orange-500" },
-    { level: "Muito Insatisfeito", count: 16, percentage: 2, color: "bg-destructive" },
-  ];
+  const [stats, setStats] = useState({
+    totalResponses: 0,
+    averageSatisfaction: 0,
+    satisfactionDistribution: [] as any[],
+    recentComplaints: [] as any[]
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const serviceMetrics = [
-    { 
-      title: "Qualidade do Atendimento Médico", 
-      score: 4.3, 
-      trend: +0.2, 
-      responses: 892,
-      distribution: { excelente: 45, bom: 35, regular: 15, ruim: 4, pessimo: 1 }
-    },
-    { 
-      title: "Tempo de Espera", 
-      score: 3.1, 
-      trend: -0.1, 
-      responses: 892,
-      distribution: { excelente: 15, bom: 25, regular: 35, ruim: 20, pessimo: 5 }
-    },
-    { 
-      title: "Limpeza e Organização", 
-      score: 4.5, 
-      trend: +0.3, 
-      responses: 892,
-      distribution: { excelente: 55, bom: 30, regular: 12, ruim: 2, pessimo: 1 }
-    },
-    { 
-      title: "Recomendação", 
-      score: 4.2, 
-      trend: +0.1, 
-      responses: 892,
-      distribution: { excelente: 42, bom: 38, regular: 15, ruim: 4, pessimo: 1 }
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const { data: responses, error } = await supabase
+        .from('survey_responses')
+        .select('satisfaction_score, responses, created_at');
+
+      if (error) throw error;
+
+      const totalResponses = responses.length;
+      const avgSatisfaction = totalResponses > 0 
+        ? responses.reduce((sum, r) => sum + (r.satisfaction_score || 3), 0) / totalResponses
+        : 0;
+
+      // Calculate satisfaction distribution
+      const distribution = [1, 2, 3, 4, 5].map(score => {
+        const count = responses.filter(r => (r.satisfaction_score || 3) === score).length;
+        return {
+          level: score === 5 ? "Muito Satisfeito" : 
+                 score === 4 ? "Satisfeito" :
+                 score === 3 ? "Regular" :
+                 score === 2 ? "Insatisfeito" : "Muito Insatisfeito",
+          count,
+          percentage: totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0,
+          color: score >= 4 ? "bg-success" : score === 3 ? "bg-warning" : "bg-destructive"
+        };
+      });
+
+      // Get recent complaints
+      const complaints = responses
+        .filter(r => r.responses && typeof r.responses === 'object' && r.responses !== null && 'comentarios' in r.responses)
+        .slice(0, 5)
+        .map(r => ({
+          issue: (r.responses as any).comentarios,
+          count: 1,
+          priority: (r.satisfaction_score || 3) <= 2 ? "alta" : "média"
+        }));
+
+      setStats({
+        totalResponses,
+        averageSatisfaction: avgSatisfaction,
+        satisfactionDistribution: distribution,
+        recentComplaints: complaints
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
-
-  const urgentIssues = [
-    { issue: "Demora excessiva na emergência", count: 12, priority: "alta" },
-    { issue: "Falta de medicamentos", count: 8, priority: "alta" },
-    { issue: "Atendimento na recepção", count: 5, priority: "média" },
-    { issue: "Limpeza dos banheiros", count: 3, priority: "baixa" },
-  ];
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -59,8 +77,60 @@ const SurveyStats = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="shadow-card">
+          <CardContent className="text-center py-8">
+            <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+            <p>Carregando estatísticas...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total de Respostas</p>
+                <p className="text-2xl font-bold text-primary">{stats.totalResponses}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Satisfação Média</p>
+                <p className="text-2xl font-bold text-success">{stats.averageSatisfaction.toFixed(1)}/5</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-success" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Questões Pendentes</p>
+                <p className="text-2xl font-bold text-warning">{stats.recentComplaints.length}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-warning" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Satisfaction Distribution */}
       <Card className="shadow-card">
         <CardHeader>
@@ -69,12 +139,12 @@ const SurveyStats = () => {
             Distribuição da Satisfação Geral
           </CardTitle>
           <CardDescription>
-            Baseado em {satisfactionData.reduce((sum, item) => sum + item.count, 0)} respostas coletadas
+            Baseado em {stats.totalResponses} respostas coletadas
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {satisfactionData.map((item) => (
+            {stats.satisfactionDistribution.map((item) => (
               <div key={item.level} className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="font-medium">{item.level}</span>
@@ -87,87 +157,24 @@ const SurveyStats = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Service Metrics */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Métricas de Serviço</CardTitle>
-            <CardDescription>Avaliação detalhada por categoria</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {serviceMetrics.map((metric) => (
-                <div key={metric.title} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{metric.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-2xl font-bold text-primary">
-                          {metric.score}
-                        </span>
-                        <span className="text-sm text-muted-foreground">/5.0</span>
-                        <div className={`flex items-center gap-1 text-xs ${
-                          metric.trend > 0 ? 'text-success' : 'text-destructive'
-                        }`}>
-                          {metric.trend > 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(metric.trend).toFixed(1)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 h-2">
-                    <div 
-                      className="bg-success rounded-sm" 
-                      style={{ width: `${metric.distribution.excelente}%` }}
-                    />
-                    <div 
-                      className="bg-primary rounded-sm" 
-                      style={{ width: `${metric.distribution.bom}%` }}
-                    />
-                    <div 
-                      className="bg-warning rounded-sm" 
-                      style={{ width: `${metric.distribution.regular}%` }}
-                    />
-                    <div 
-                      className="bg-orange-500 rounded-sm" 
-                      style={{ width: `${metric.distribution.ruim}%` }}
-                    />
-                    <div 
-                      className="bg-destructive rounded-sm" 
-                      style={{ width: `${metric.distribution.pessimo}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {metric.responses} respostas
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Urgent Issues */}
+      {/* Recent Issues */}
+      {stats.recentComplaints.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-warning" />
-              Questões Prioritárias
+              Comentários Recentes
             </CardTitle>
             <CardDescription>
-              Problemas reportados que requerem atenção
+              Comentários que requerem atenção
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {urgentIssues.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+              {stats.recentComplaints.map((item, index) => (
+                <div key={index} className="flex items-start justify-between p-3 rounded-lg border">
                   <div className="flex-1">
-                    <p className="font-medium text-sm">{item.issue}</p>
-                    <p className="text-xs text-muted-foreground">{item.count} relatos</p>
+                    <p className="font-medium text-sm line-clamp-2">{item.issue}</p>
                   </div>
                   <Badge className={getPriorityColor(item.priority)}>
                     {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
@@ -175,16 +182,21 @@ const SurveyStats = () => {
                 </div>
               ))}
             </div>
-            
-            <div className="mt-4 p-3 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle className="h-4 w-4" />
-                <span>15 questões foram resolvidas este mês</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {stats.totalResponses === 0 && (
+        <Card className="shadow-card">
+          <CardContent className="text-center py-8">
+            <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Sem dados ainda</h3>
+            <p className="text-muted-foreground">
+              As estatísticas aparecerão quando houver respostas da pesquisa.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Copy, Link as LinkIcon, User, Edit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const WhatsAppSender = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [patientData, setPatientData] = useState({
     name: "",
     phone: "",
@@ -16,6 +19,7 @@ const WhatsAppSender = () => {
   });
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   // URL do formulário de pesquisa
   const surveyUrl = `${window.location.origin}/survey`;
@@ -62,7 +66,23 @@ Prefeitura de Joaquim Gomes`;
     });
   };
 
-  const sendViaWhatsAppWeb = () => {
+  const logWhatsAppMessage = async (phone: string, message: string, name: string) => {
+    try {
+      await supabase
+        .from('whatsapp_messages')
+        .insert({
+          phone,
+          message,
+          patient_name: name,
+          status: 'sent',
+          sent_by: user?.id
+        });
+    } catch (error) {
+      console.error('Error logging WhatsApp message:', error);
+    }
+  };
+
+  const sendViaWhatsAppWeb = async () => {
     if (!patientData.phone) {
       toast({
         title: "Erro",
@@ -72,6 +92,7 @@ Prefeitura de Joaquim Gomes`;
       return;
     }
 
+    setIsSending(true);
     const finalMessage = getCurrentMessage();
     
     // Limitar o tamanho da mensagem para evitar bloqueios
@@ -95,8 +116,12 @@ Prefeitura de Joaquim Gomes`;
         description: "Por favor, reduza o tamanho da mensagem.",
         variant: "destructive",
       });
+      setIsSending(false);
       return;
     }
+    
+    // Registrar o envio no banco
+    await logWhatsAppMessage(fullPhone, truncatedMessage, patientData.name);
     
     window.open(whatsappUrl, '_blank');
     
@@ -104,6 +129,12 @@ Prefeitura de Joaquim Gomes`;
       title: "WhatsApp Aberto!",
       description: "A mensagem foi preparada. Clique em enviar no WhatsApp.",
     });
+
+    // Limpar formulário após envio
+    setPatientData({ name: "", phone: "", additionalMessage: "" });
+    setCustomMessage("");
+    setIsEditingMessage(false);
+    setIsSending(false);
   };
 
   return (
@@ -228,10 +259,10 @@ Prefeitura de Joaquim Gomes`;
             onClick={sendViaWhatsAppWeb}
             className="w-full"
             size="lg"
-            disabled={!patientData.phone}
+            disabled={!patientData.phone || isSending}
           >
             <MessageSquare className="h-4 w-4 mr-2" />
-            Enviar para WhatsApp
+            {isSending ? 'Preparando...' : 'Enviar para WhatsApp'}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
             * Certifique-se de estar logado no WhatsApp Web
