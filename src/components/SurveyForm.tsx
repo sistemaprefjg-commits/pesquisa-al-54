@@ -6,16 +6,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Star, Heart, Send } from "lucide-react";
+import { Star, Heart, Send, ChevronLeft, ChevronRight } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const SurveyForm = () => {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     satisfaction: "",
     service: "",
     waiting: "",
     cleanliness: "",
     staff: "",
+    professionalCare: "",
     recommendation: "",
     complaints: "",
     suggestions: "",
@@ -24,15 +27,155 @@ const SurveyForm = () => {
     neighborhood: ""
   });
 
+  const questions = [
+    {
+      id: "patientInfo",
+      title: "Dados do Paciente",
+      type: "info",
+      fields: [
+        { 
+          key: "patientName", 
+          label: "Nome (opcional)", 
+          type: "input", 
+          placeholder: "Seu nome",
+          required: false
+        },
+        { 
+          key: "phone", 
+          label: "Telefone (opcional)", 
+          type: "input", 
+          placeholder: "(11) 99999-9999",
+          required: false
+        },
+        { 
+          key: "neighborhood", 
+          label: "Bairro", 
+          type: "input", 
+          placeholder: "Seu bairro",
+          required: true
+        }
+      ]
+    },
+    {
+      id: "satisfaction",
+      title: "Satisfação Geral",
+      question: "Como você avalia sua satisfação geral com o atendimento?",
+      type: "radio",
+      options: [
+        { value: "5", label: "Muito Satisfeito", icon: "😊" },
+        { value: "4", label: "Satisfeito", icon: "🙂" },
+        { value: "3", label: "Regular", icon: "😐" },
+        { value: "2", label: "Insatisfeito", icon: "😕" },
+        { value: "1", label: "Muito Insatisfeito", icon: "😞" },
+      ]
+    },
+    {
+      id: "service",
+      title: "Qualidade do Serviço",
+      question: "Como você avalia a qualidade do serviço médico?",
+      type: "radio",
+      options: ["Excelente", "Bom", "Regular", "Ruim", "Péssimo"]
+    },
+    {
+      id: "professionalCare",
+      title: "Atendimento dos Profissionais",
+      question: "Como você avalia o atendimento dos técnicos e enfermeiros?",
+      type: "radio",
+      options: ["Excelente", "Bom", "Regular", "Ruim", "Péssimo"]
+    },
+    {
+      id: "waiting",
+      title: "Tempo de Espera",
+      question: "Como você avalia o tempo de espera?",
+      type: "radio",
+      options: [
+        "Muito rápido (0-15 min)",
+        "Rápido (16-30 min)", 
+        "Moderado (31-60 min)",
+        "Demorado (1-2 horas)",
+        "Muito demorado (+2 horas)"
+      ]
+    },
+    {
+      id: "cleanliness",
+      title: "Limpeza e Organização",
+      question: "Como você avalia a limpeza e organização do hospital?",
+      type: "radio",
+      options: ["Excelente", "Bom", "Regular", "Ruim", "Péssimo"]
+    },
+    {
+      id: "recommendation",
+      title: "Recomendação",
+      question: "Você recomendaria nosso hospital para familiares e amigos?",
+      type: "radio",
+      options: ["Sim, com certeza", "Sim, provavelmente", "Talvez", "Provavelmente não", "Definitivamente não"]
+    },
+    {
+      id: "feedback",
+      title: "Comentários e Sugestões",
+      type: "textarea",
+      fields: [
+        {
+          key: "complaints",
+          label: "Você tem alguma reclamação ou problema a relatar?",
+          placeholder: "Descreva sua reclamação ou problema...",
+          required: false
+        },
+        {
+          key: "suggestions",
+          label: "Sugestões para melhorarmos nossos serviços:",
+          placeholder: "Suas sugestões são muito importantes para nós...",
+          required: false
+        }
+      ]
+    }
+  ];
+
+  const totalSteps = questions.length;
+  const progress = ((currentStep + 1) / totalSteps) * 100;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simular envio da pesquisa e redirecionar para página de sucesso
-    navigate('/survey-success');
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Submeter pesquisa
+      navigate('/survey-success');
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const currentQuestion = questions[currentStep];
+  const isLastStep = currentStep === totalSteps - 1;
+
+  const canProceed = () => {
+    const current = questions[currentStep];
+    
+    if (current.type === "info") {
+      return current.fields.some(field => 
+        field.required ? formData[field.key as keyof typeof formData] : true
+      );
+    }
+    
+    if (current.type === "radio") {
+      return formData[current.id as keyof typeof formData];
+    }
+    
+    if (current.type === "textarea") {
+      return true; // Comentários são opcionais
+    }
+    
+    return true;
   };
 
   return (
@@ -45,197 +188,125 @@ const SurveyForm = () => {
         <p className="text-sm text-muted-foreground">
           Sua opinião nos ajuda a melhorar nossos serviços
         </p>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Pergunta {currentStep + 1} de {totalSteps}</span>
+            <span>{Math.round(progress)}% concluído</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Dados do Paciente */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Dados do Paciente</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="patientName">Nome (opcional)</Label>
-              <Input
-                id="patientName"
-                placeholder="Seu nome"
-                value={formData.patientName}
-                onChange={(e) => handleInputChange("patientName", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Telefone (opcional)</Label>
-              <Input
-                id="phone"
-                placeholder="(11) 99999-9999"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="neighborhood">Bairro</Label>
-              <Input
-                id="neighborhood"
-                placeholder="Seu bairro"
-                value={formData.neighborhood}
-                onChange={(e) => handleInputChange("neighborhood", e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Avaliação Geral */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Avaliação do Atendimento</CardTitle>
+            <CardTitle className="text-lg">{currentQuestion.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div>
-              <Label className="text-base font-medium">
-                Como você avalia sua satisfação geral com o atendimento?
-              </Label>
-              <RadioGroup
-                value={formData.satisfaction}
-                onValueChange={(value) => handleInputChange("satisfaction", value)}
-                className="mt-3"
-              >
-                {[
-                  { value: "5", label: "Muito Satisfeito", icon: "😊" },
-                  { value: "4", label: "Satisfeito", icon: "🙂" },
-                  { value: "3", label: "Regular", icon: "😐" },
-                  { value: "2", label: "Insatisfeito", icon: "😕" },
-                  { value: "1", label: "Muito Insatisfeito", icon: "😞" },
-                ].map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`satisfaction-${option.value}`} />
-                    <Label htmlFor={`satisfaction-${option.value}`} className="flex items-center gap-2">
-                      <span>{option.icon}</span>
-                      {option.label}
+            {/* Pergunta de informações pessoais */}
+            {currentQuestion.type === "info" && (
+              <div className="space-y-4">
+                {currentQuestion.fields.map((field) => (
+                  <div key={field.key}>
+                    <Label htmlFor={field.key}>
+                      {field.label}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
+                    <Input
+                      id={field.key}
+                      placeholder={field.placeholder}
+                      value={formData[field.key as keyof typeof formData]}
+                      onChange={(e) => handleInputChange(field.key, e.target.value)}
+                      required={field.required}
+                    />
                   </div>
                 ))}
-              </RadioGroup>
-            </div>
+              </div>
+            )}
 
-            <div>
-              <Label className="text-base font-medium">
-                Como você avalia a qualidade do serviço médico?
-              </Label>
-              <RadioGroup
-                value={formData.service}
-                onValueChange={(value) => handleInputChange("service", value)}
-                className="mt-3"
-              >
-                {["Excelente", "Bom", "Regular", "Ruim", "Péssimo"].map((option, index) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`service-${option}`} />
-                    <Label htmlFor={`service-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+            {/* Pergunta de múltipla escolha */}
+            {currentQuestion.type === "radio" && (
+              <div>
+                <Label className="text-base font-medium">
+                  {currentQuestion.question}
+                </Label>
+                <RadioGroup
+                  value={formData[currentQuestion.id as keyof typeof formData]}
+                  onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
+                  className="mt-3"
+                >
+                  {currentQuestion.options.map((option, index) => {
+                    const optionValue = typeof option === 'object' ? option.value : option;
+                    const optionLabel = typeof option === 'object' ? option.label : option;
+                    const optionIcon = typeof option === 'object' ? option.icon : null;
+                    
+                    return (
+                      <div key={optionValue} className="flex items-center space-x-2">
+                        <RadioGroupItem value={optionValue} id={`${currentQuestion.id}-${index}`} />
+                        <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex items-center gap-2">
+                          {optionIcon && <span>{optionIcon}</span>}
+                          {optionLabel}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+            )}
 
-            <div>
-              <Label className="text-base font-medium">
-                Como você avalia o tempo de espera?
-              </Label>
-              <RadioGroup
-                value={formData.waiting}
-                onValueChange={(value) => handleInputChange("waiting", value)}
-                className="mt-3"
-              >
-                {[
-                  "Muito rápido (0-15 min)",
-                  "Rápido (16-30 min)", 
-                  "Moderado (31-60 min)",
-                  "Demorado (1-2 horas)",
-                  "Muito demorado (+2 horas)"
-                ].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`waiting-${option}`} />
-                    <Label htmlFor={`waiting-${option}`}>{option}</Label>
+            {/* Pergunta de texto livre */}
+            {currentQuestion.type === "textarea" && (
+              <div className="space-y-4">
+                {currentQuestion.fields.map((field) => (
+                  <div key={field.key}>
+                    <Label htmlFor={field.key} className="text-base font-medium">
+                      {field.label}
+                    </Label>
+                    <Textarea
+                      id={field.key}
+                      placeholder={field.placeholder}
+                      value={formData[field.key as keyof typeof formData]}
+                      onChange={(e) => handleInputChange(field.key, e.target.value)}
+                      className="mt-2"
+                      rows={3}
+                    />
                   </div>
                 ))}
-              </RadioGroup>
-            </div>
-
-            <div>
-              <Label className="text-base font-medium">
-                Como você avalia a limpeza e organização do hospital?
-              </Label>
-              <RadioGroup
-                value={formData.cleanliness}
-                onValueChange={(value) => handleInputChange("cleanliness", value)}
-                className="mt-3"
-              >
-                {["Excelente", "Bom", "Regular", "Ruim", "Péssimo"].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`cleanliness-${option}`} />
-                    <Label htmlFor={`cleanliness-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div>
-              <Label className="text-base font-medium">
-                Você recomendaria nosso hospital para familiares e amigos?
-              </Label>
-              <RadioGroup
-                value={formData.recommendation}
-                onValueChange={(value) => handleInputChange("recommendation", value)}
-                className="mt-3"
-              >
-                {["Sim, com certeza", "Sim, provavelmente", "Talvez", "Provavelmente não", "Definitivamente não"].map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={`rec-${option}`} />
-                    <Label htmlFor={`rec-${option}`}>{option}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Comentários e Sugestões */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Comentários e Sugestões</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="complaints" className="text-base font-medium">
-                Você tem alguma reclamação ou problema a relatar?
-              </Label>
-              <Textarea
-                id="complaints"
-                placeholder="Descreva sua reclamação ou problema..."
-                value={formData.complaints}
-                onChange={(e) => handleInputChange("complaints", e.target.value)}
-                className="mt-2"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="suggestions" className="text-base font-medium">
-                Sugestões para melhorarmos nossos serviços:
-              </Label>
-              <Textarea
-                id="suggestions"
-                placeholder="Suas sugestões são muito importantes para nós..."
-                value={formData.suggestions}
-                onChange={(e) => handleInputChange("suggestions", e.target.value)}
-                className="mt-2"
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Button type="submit" className="w-full" size="lg">
-          <Send className="mr-2 h-4 w-4" />
-          Enviar Avaliação
-        </Button>
+        <div className="flex justify-between gap-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className="flex-1"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Anterior
+          </Button>
+          
+          <Button 
+            type="submit" 
+            className="flex-1"
+            disabled={!canProceed()}
+          >
+            {isLastStep ? (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Enviar Avaliação
+              </>
+            ) : (
+              <>
+                Próxima
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   );
