@@ -215,9 +215,9 @@ const SurveyForm = () => {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex items-start justify-center px-3 md:px-6 pb-3 md:pb-6">
+      <div className="flex items-start justify-center px-3 md:px-6 pb-3 md:pb-6">
         <div className="w-full max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-12">
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-12">
             {/* Container da pergunta com animação */}
             <div className="animate-fade-in">
               {/* Pergunta de informações pessoais */}
