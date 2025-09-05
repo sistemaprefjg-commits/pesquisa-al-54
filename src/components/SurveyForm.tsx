@@ -29,7 +29,7 @@ const SurveyForm = () => {
   const questions = [
     {
       id: "patientInfo",
-      title: "Dados do Paciente",
+      title: "Pesquisa de Satisfação",
       type: "info",
       fields: [
         { 
@@ -228,7 +228,7 @@ const SurveyForm = () => {
                       {currentQuestion.title}
                     </h1>
                     <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                      Vamos começar com algumas informações básicas
+                      Responda rapidamente para nos ajudar a melhorar nossos serviços
                     </p>
                   </div>
                   
