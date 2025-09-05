@@ -1,12 +1,11 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Star, Heart, Send, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Send, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const SurveyForm = () => {
@@ -178,136 +177,228 @@ const SurveyForm = () => {
     return true;
   };
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && canProceed()) {
+        e.preventDefault();
+        if (currentStep < totalSteps - 1) {
+          setCurrentStep(currentStep + 1);
+        } else {
+          navigate('/survey-success');
+        }
+      }
+    };
+
+    window.addEventListener('keypress', handleKeyPress);
+    return () => window.removeEventListener('keypress', handleKeyPress);
+  }, [currentStep, canProceed, navigate, totalSteps]);
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
-        <div className="flex items-center justify-center gap-2 text-primary">
-          <Heart className="h-6 w-6" />
-          <h2 className="text-xl font-semibold">Pesquisa de Satisfação</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Sua opinião nos ajuda a melhorar nossos serviços
-        </p>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Pergunta {currentStep + 1} de {totalSteps}</span>
-            <span>{Math.round(progress)}% concluído</span>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-background flex flex-col">
+      {/* Header com progresso */}
+      <div className="w-full p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Heart className="h-6 w-6 text-primary" />
+              <span className="text-sm font-medium text-muted-foreground">
+                Pesquisa de Satisfação
+              </span>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {currentStep + 1} de {totalSteps}
+            </div>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-1" />
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{currentQuestion.title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Pergunta de informações pessoais */}
-            {currentQuestion.type === "info" && (
-              <div className="space-y-4">
-                {currentQuestion.fields.map((field) => (
-                  <div key={field.key}>
-                    <Label htmlFor={field.key}>
-                      {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </Label>
-                    <Input
-                      id={field.key}
-                      placeholder={field.placeholder}
-                      value={formData[field.key as keyof typeof formData]}
-                      onChange={(e) => handleInputChange(field.key, e.target.value)}
-                      required={field.required}
-                    />
+      {/* Conteúdo principal */}
+      <div className="flex-1 flex items-center justify-center px-6 pb-6">
+        <div className="w-full max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-12">
+            {/* Container da pergunta com animação */}
+            <div className="animate-fade-in">
+              {/* Pergunta de informações pessoais */}
+              {currentQuestion.type === "info" && (
+                <div className="text-center space-y-8">
+                  <div className="space-y-4">
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                      {currentQuestion.title}
+                    </h1>
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                      Vamos começar com algumas informações básicas
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Pergunta de múltipla escolha */}
-            {currentQuestion.type === "radio" && (
-              <div>
-                <Label className="text-base font-medium">
-                  {currentQuestion.question}
-                </Label>
-                <RadioGroup
-                  value={formData[currentQuestion.id as keyof typeof formData]}
-                  onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
-                  className="mt-3"
-                >
-                  {currentQuestion.options.map((option, index) => {
-                    const optionValue = typeof option === 'object' ? option.value : option;
-                    const optionLabel = typeof option === 'object' ? option.label : option;
-                    const optionIcon = typeof option === 'object' ? option.icon : null;
-                    
-                    return (
-                      <div key={optionValue} className="flex items-center space-x-2">
-                        <RadioGroupItem value={optionValue} id={`${currentQuestion.id}-${index}`} />
-                        <Label htmlFor={`${currentQuestion.id}-${index}`} className="flex items-center gap-2">
-                          {optionIcon && <span>{optionIcon}</span>}
-                          {optionLabel}
+                  
+                  <div className="max-w-md mx-auto space-y-6">
+                    {currentQuestion.fields.map((field, index) => (
+                      <div key={field.key} className="space-y-2">
+                        <Label 
+                          htmlFor={field.key} 
+                          className="text-lg font-medium text-left block"
+                        >
+                          {field.label}
+                          {field.required && <span className="text-destructive ml-1">*</span>}
                         </Label>
+                        <Input
+                          id={field.key}
+                          placeholder={field.placeholder}
+                          value={formData[field.key as keyof typeof formData]}
+                          onChange={(e) => handleInputChange(field.key, e.target.value)}
+                          required={field.required}
+                          className="text-lg p-4 h-14"
+                          autoFocus={index === 0}
+                        />
                       </div>
-                    );
-                  })}
-                </RadioGroup>
-              </div>
-            )}
-
-            {/* Pergunta de texto livre */}
-            {currentQuestion.type === "textarea" && (
-              <div className="space-y-4">
-                {currentQuestion.fields.map((field) => (
-                  <div key={field.key}>
-                    <Label htmlFor={field.key} className="text-base font-medium">
-                      {field.label}
-                    </Label>
-                    <Textarea
-                      id={field.key}
-                      placeholder={field.placeholder}
-                      value={formData[field.key as keyof typeof formData]}
-                      onChange={(e) => handleInputChange(field.key, e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                    />
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              )}
 
-        <div className="flex justify-between gap-4">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={handlePrevious}
-            disabled={currentStep === 0}
-            className="flex-1"
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Anterior
-          </Button>
-          
-          <Button 
-            type="submit" 
-            className="flex-1"
-            disabled={!canProceed()}
-          >
-            {isLastStep ? (
-              <>
-                <Send className="mr-2 h-4 w-4" />
-                Enviar Avaliação
-              </>
-            ) : (
-              <>
-                Próxima
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
+              {/* Pergunta de múltipla escolha */}
+              {currentQuestion.type === "radio" && (
+                <div className="text-center space-y-8">
+                  <div className="space-y-4">
+                    <div className="text-sm font-medium text-primary uppercase tracking-wider">
+                      {currentQuestion.title}
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
+                      {currentQuestion.question}
+                    </h1>
+                  </div>
+                  
+                  <div className="max-w-2xl mx-auto">
+                    <RadioGroup
+                      value={formData[currentQuestion.id as keyof typeof formData]}
+                      onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
+                      className="space-y-4"
+                    >
+                      {currentQuestion.options.map((option, index) => {
+                        const optionValue = typeof option === 'object' ? option.value : option;
+                        const optionLabel = typeof option === 'object' ? option.label : option;
+                        const optionIcon = typeof option === 'object' ? option.icon : null;
+                        
+                        return (
+                          <div 
+                            key={optionValue} 
+                            className="relative group"
+                          >
+                            <input
+                              type="radio"
+                              id={`${currentQuestion.id}-${index}`}
+                              name={currentQuestion.id}
+                              value={optionValue}
+                              checked={formData[currentQuestion.id as keyof typeof formData] === optionValue}
+                              onChange={(e) => handleInputChange(currentQuestion.id, e.target.value)}
+                              className="peer sr-only"
+                            />
+                            <Label 
+                              htmlFor={`${currentQuestion.id}-${index}`}
+                              className="flex items-center justify-between w-full p-6 text-left border-2 border-border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary group-hover:scale-[1.02]"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="text-2xl font-bold text-muted-foreground peer-checked:text-primary transition-colors">
+                                  {String.fromCharCode(65 + index)}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {optionIcon && <span className="text-2xl">{optionIcon}</span>}
+                                  <span className="text-lg font-medium">{optionLabel}</span>
+                                </div>
+                              </div>
+                              <ArrowRight className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </RadioGroup>
+                  </div>
+                </div>
+              )}
+
+              {/* Pergunta de texto livre */}
+              {currentQuestion.type === "textarea" && (
+                <div className="text-center space-y-8">
+                  <div className="space-y-4">
+                    <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                      {currentQuestion.title}
+                    </h1>
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                      Seus comentários são muito importantes para nós
+                    </p>
+                  </div>
+                  
+                  <div className="max-w-2xl mx-auto space-y-8">
+                    {currentQuestion.fields.map((field) => (
+                      <div key={field.key} className="space-y-4">
+                        <Label 
+                          htmlFor={field.key} 
+                          className="text-xl font-medium block"
+                        >
+                          {field.label}
+                        </Label>
+                        <Textarea
+                          id={field.key}
+                          placeholder={field.placeholder}
+                          value={formData[field.key as keyof typeof formData]}
+                          onChange={(e) => handleInputChange(field.key, e.target.value)}
+                          className="min-h-[120px] text-lg p-4 resize-none"
+                          autoFocus
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Navegação */}
+            <div className="flex justify-center">
+              <div className="flex gap-4 max-w-md w-full">
+                {currentStep > 0 && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handlePrevious}
+                    className="px-8 py-3 text-base"
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Anterior
+                  </Button>
+                )}
+                
+                <Button 
+                  type="submit" 
+                  className="flex-1 px-8 py-3 text-base"
+                  disabled={!canProceed()}
+                >
+                  {isLastStep ? (
+                    <>
+                      <Send className="mr-2 h-5 w-5" />
+                      Enviar Avaliação
+                    </>
+                  ) : (
+                    <>
+                      {canProceed() ? 'Continuar' : 'Selecione uma opção'}
+                      {canProceed() && <ChevronRight className="ml-2 h-4 w-4" />}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          {/* Dica de navegação */}
+          {canProceed() && !isLastStep && (
+            <div className="text-center mt-8">
+              <p className="text-sm text-muted-foreground">
+                💡 Pressione <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Enter</kbd> para continuar
+              </p>
+            </div>
+          )}
         </div>
-      </form>
+      </div>
     </div>
   );
 };
