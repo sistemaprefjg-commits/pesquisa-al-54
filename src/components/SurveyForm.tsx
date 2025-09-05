@@ -215,9 +215,9 @@ const SurveyForm = () => {
       </div>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex items-center justify-center px-4 md:px-6 pb-4 md:pb-6">
+      <div className="flex-1 flex items-start md:items-center justify-center px-4 md:px-6 pb-4 md:pb-6 pt-2 md:pt-0">
         <div className="w-full max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="space-y-8 md:space-y-12">
+          <form onSubmit={handleSubmit} className="space-y-6 md:space-y-12">
             {/* Container da pergunta com animação */}
             <div className="animate-fade-in">
               {/* Pergunta de informações pessoais */}
@@ -259,12 +259,12 @@ const SurveyForm = () => {
 
               {/* Pergunta de múltipla escolha */}
               {currentQuestion.type === "radio" && (
-                <div className="text-center space-y-6 md:space-y-8">
-                  <div className="space-y-3 md:space-y-4 px-4">
+                <div className="text-center space-y-4 md:space-y-8">
+                  <div className="space-y-2 md:space-y-4 px-4">
                     <div className="text-xs md:text-sm font-medium text-primary uppercase tracking-wider">
                       {currentQuestion.title}
                     </div>
-                    <h1 className="text-xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight">
+                    <h1 className="text-lg md:text-3xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight">
                       {currentQuestion.question}
                     </h1>
                   </div>
@@ -273,7 +273,7 @@ const SurveyForm = () => {
                     <RadioGroup
                       value={formData[currentQuestion.id as keyof typeof formData]}
                       onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
-                      className="space-y-3 md:space-y-4"
+                      className="space-y-2 md:space-y-4"
                     >
                       {currentQuestion.options.map((option, index) => {
                         const optionValue = typeof option === 'object' ? option.value : option;
@@ -296,14 +296,14 @@ const SurveyForm = () => {
                             />
                             <Label 
                               htmlFor={`${currentQuestion.id}-${index}`}
-                              className="flex items-center justify-between w-full p-4 md:p-6 text-left border-2 border-border rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary group-hover:scale-[1.01] md:group-hover:scale-[1.02]"
+                              className="flex items-center justify-between w-full p-3 md:p-6 text-left border-2 border-border rounded-lg md:rounded-xl cursor-pointer transition-all hover:border-primary hover:bg-primary/5 peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary group-hover:scale-[1.01] md:group-hover:scale-[1.02]"
                             >
-                              <div className="flex items-center gap-3 md:gap-4">
-                                <div className="text-lg md:text-2xl font-bold text-muted-foreground peer-checked:text-primary transition-colors">
+                              <div className="flex items-center gap-2 md:gap-4">
+                                <div className="text-base md:text-2xl font-bold text-muted-foreground peer-checked:text-primary transition-colors min-w-[24px] md:min-w-[32px]">
                                   {String.fromCharCode(65 + index)}
                                 </div>
                                 <div className="flex items-center gap-2 md:gap-3">
-                                  {optionIcon && <span className="text-xl md:text-2xl">{optionIcon}</span>}
+                                  {optionIcon && <span className="text-lg md:text-2xl">{optionIcon}</span>}
                                   <span className="text-sm md:text-lg font-medium">{optionLabel}</span>
                                 </div>
                               </div>
