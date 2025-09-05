@@ -42,7 +42,7 @@ const Login = () => {
         <CardHeader className="space-y-4 text-center">
           <div className="flex justify-center">
             <img 
-              src="/lovable-uploads/e3b32c81-b8b7-40ea-8f43-5860ca3043b8.png" 
+              src="/lovable-uploads/25c56df3-f26f-40d4-928b-178f9a81f224.png" 
               alt="Prefeitura de Joaquim Gomes" 
               className="h-20 w-auto"
             />
