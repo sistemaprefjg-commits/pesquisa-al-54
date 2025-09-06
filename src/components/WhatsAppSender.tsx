@@ -27,9 +27,7 @@ const WhatsAppSender = () => {
   const generateMessage = (name: string) => {
     return `Olá ${name || 'cidadão'}! 👋
 
-Esperamos que tenha tido uma boa experiência conosco.
-
-Sua opinião é importante para melhorarmos. Responda nossa pesquisa:
+Sua opinião é importante para melhorarmos. Responda nossa pesquisa de satisfação após o seu atendimento:
 
 ${surveyUrl}
 
@@ -38,7 +36,7 @@ ${surveyUrl}
 💙 Nos ajuda a cuidar melhor
 
 Obrigado!
-Prefeitura de Joaquim Gomes`;
+Hospital Municipal Ana Anita Gomes Fragoso`;
   };
 
   const getCurrentMessage = () => {
