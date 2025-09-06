@@ -8,6 +8,8 @@ import { ArrowLeft, Download, TrendingUp, Users, MessageSquare, Star } from 'luc
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Interface para respostas reais do Supabase
 interface SurveyResponse {
@@ -224,6 +226,133 @@ const Reports = () => {
     },
   };
 
+  const generatePDF = async () => {
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let currentY = 20;
+
+      // Header
+      pdf.setFontSize(20);
+      pdf.text('Relatório de Satisfação do Paciente', 20, currentY);
+      currentY += 10;
+
+      pdf.setFontSize(12);
+      pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, currentY);
+      currentY += 15;
+
+      // KPIs
+      pdf.setFontSize(16);
+      pdf.text('Métricas Principais', 20, currentY);
+      currentY += 10;
+
+      pdf.setFontSize(12);
+      pdf.text(`Total de Pesquisas: ${totalSurveys}`, 20, currentY);
+      pdf.text(`Taxa de Resposta: ${responseRate}%`, 105, currentY);
+      currentY += 8;
+      pdf.text(`Satisfação Média: ${averageSatisfaction}/5.0`, 20, currentY);
+      pdf.text(`Pacientes Únicos: ${uniquePatients}`, 105, currentY);
+      currentY += 15;
+
+      // Distribuição de Satisfação
+      pdf.setFontSize(16);
+      pdf.text('Distribuição de Satisfação', 20, currentY);
+      currentY += 10;
+
+      satisfactionData.forEach((item) => {
+        if (item.value > 0) {
+          pdf.setFontSize(12);
+          pdf.text(`${item.name}: ${item.value} (${Math.round((item.value / totalSurveys) * 100)}%)`, 20, currentY);
+          currentY += 6;
+        }
+      });
+      currentY += 10;
+
+      // Principais Queixas
+      if (mainComplaints.length > 0) {
+        pdf.setFontSize(16);
+        pdf.text('Principais Queixas e Reclamações', 20, currentY);
+        currentY += 10;
+
+        mainComplaints.forEach((complaint, index) => {
+          if (currentY > 250) {
+            pdf.addPage();
+            currentY = 20;
+          }
+          
+          pdf.setFontSize(14);
+          pdf.text(`${index + 1}. ${complaint.category}`, 20, currentY);
+          currentY += 6;
+          
+          pdf.setFontSize(12);
+          pdf.text(`Ocorrências: ${complaint.count} (${complaint.percentage}% das reclamações)`, 25, currentY);
+          currentY += 6;
+          
+          pdf.text(`Severidade: ${complaint.severity === 'high' ? 'Alta' : complaint.severity === 'medium' ? 'Média' : 'Baixa'}`, 25, currentY);
+          currentY += 6;
+          
+          if (complaint.examples.length > 0) {
+            pdf.text('Exemplos:', 25, currentY);
+            currentY += 6;
+            complaint.examples.forEach((example) => {
+              const lines = pdf.splitTextToSize(`• ${example}`, 160);
+              pdf.text(lines, 30, currentY);
+              currentY += lines.length * 6;
+            });
+          }
+          currentY += 8;
+        });
+      }
+
+      // Nova página para respostas recentes
+      pdf.addPage();
+      currentY = 20;
+      
+      pdf.setFontSize(16);
+      pdf.text('Respostas Recentes', 20, currentY);
+      currentY += 15;
+
+      recentResponsesData.forEach((response, index) => {
+        if (currentY > 240) {
+          pdf.addPage();
+          currentY = 20;
+        }
+
+        pdf.setFontSize(14);
+        pdf.text(`Paciente: ${response.patient}`, 20, currentY);
+        currentY += 6;
+        
+        pdf.setFontSize(12);
+        pdf.text(`Data: ${new Date(response.date).toLocaleString('pt-BR')}`, 20, currentY);
+        pdf.text(`Avaliação: ${response.rating}/5`, 105, currentY);
+        currentY += 8;
+
+        if (response.complaints) {
+          pdf.text('Reclamações:', 20, currentY);
+          currentY += 6;
+          const complaintLines = pdf.splitTextToSize(response.complaints, 160);
+          pdf.text(complaintLines, 25, currentY);
+          currentY += complaintLines.length * 6;
+        }
+
+        if (response.suggestions) {
+          pdf.text('Sugestões:', 20, currentY);
+          currentY += 6;
+          const suggestionLines = pdf.splitTextToSize(response.suggestions, 160);
+          pdf.text(suggestionLines, 25, currentY);
+          currentY += suggestionLines.length * 6;
+        }
+
+        currentY += 10;
+      });
+
+      // Salvar o PDF
+      pdf.save(`relatorio-satisfacao-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF. Tente novamente.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/5">
       <header className="bg-white border-b shadow-sm">
@@ -239,7 +368,7 @@ const Reports = () => {
               <h1 className="text-2xl font-bold text-gray-900">Relatórios e Estatísticas</h1>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={generatePDF}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar PDF
               </Button>
