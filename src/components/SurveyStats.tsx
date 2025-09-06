@@ -16,6 +16,26 @@ const SurveyStats = () => {
 
   useEffect(() => {
     loadStats();
+
+    // Set up real-time updates
+    const channel = supabase
+      .channel('survey-responses-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'survey_responses'
+        },
+        () => {
+          loadStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadStats = async () => {
