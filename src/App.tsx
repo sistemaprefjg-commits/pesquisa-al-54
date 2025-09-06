@@ -14,6 +14,7 @@ import Survey from "./pages/Survey";
 import SurveySuccess from "./pages/SurveySuccess";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import AdminSetup from "./components/AdminSetup";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
             />
             <Route path="/survey" element={<Survey />} />
             <Route path="/survey-success" element={<SurveySuccess />} />
+            <Route path="/admin-setup" element={<AdminSetup />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

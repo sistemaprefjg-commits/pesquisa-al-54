@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Settings } from 'lucide-react';
 
 const Login = () => {
   const { login, signUp, user } = useAuth();
@@ -200,6 +201,16 @@ const Login = () => {
               </form>
             </TabsContent>
           </Tabs>
+          
+          <div className="mt-4 pt-4 border-t text-center">
+            <Link 
+              to="/admin-setup" 
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Setup Administrativo
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
