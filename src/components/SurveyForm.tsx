@@ -199,9 +199,27 @@ const SurveyForm = () => {
       console.log('Survey data:', surveyData);
       console.log('Form data:', formData);
       
-      // Se não tiver survey data, buscar novamente
-      if (!surveyData) {
-        await loadActiveSurvey();
+      // Garantir que temos um survey_id válido
+      let surveyId = surveyData?.id;
+      
+      // Se não tiver survey data, buscar uma pesquisa ativa
+      if (!surveyId) {
+        const { data: activeSurvey } = await supabase
+          .from('surveys')
+          .select('*')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+        
+        if (activeSurvey) {
+          setSurveyData(activeSurvey);
+          surveyId = activeSurvey.id;
+        }
+      }
+
+      if (!surveyId) {
+        console.error('No survey ID available');
+        throw new Error('Pesquisa não encontrada. Tente recarregar a página.');
       }
 
       const responses = {
@@ -215,20 +233,6 @@ const SurveyForm = () => {
         sugestoes: formData.suggestions,
         bairro: formData.neighborhood
       };
-
-      // Garantir que temos um survey_id válido
-      let surveyId = surveyData?.id;
-      if (!surveyId) {
-        // Buscar qualquer pesquisa ativa
-        const { data: activeSurvey } = await supabase
-          .from('surveys')
-          .select('id')
-          .eq('is_active', true)
-          .limit(1)
-          .single();
-        
-        surveyId = activeSurvey?.id;
-      }
 
       console.log('Using survey ID:', surveyId);
 

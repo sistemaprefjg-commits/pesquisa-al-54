@@ -54,7 +54,7 @@ const Survey = () => {
             variant="ghost" 
             size="sm" 
             className="mt-4"
-            onClick={() => window.location.href = '/'}
+            onClick={() => window.history.back()}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar ao Sistema
