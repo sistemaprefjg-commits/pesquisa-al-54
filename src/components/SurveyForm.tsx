@@ -42,7 +42,7 @@ const SurveyForm = () => {
         .from('surveys')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .limit(1);
 
       if (error) {
         console.error('Error loading survey:', error);
@@ -51,8 +51,8 @@ const SurveyForm = () => {
           description: "Erro ao carregar pesquisa. Usando formulário padrão.",
           variant: "destructive"
         });
-      } else {
-        setSurveyData(data);
+      } else if (data && data.length > 0) {
+        setSurveyData(data[0]);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -195,6 +195,15 @@ const SurveyForm = () => {
   const saveResponse = async () => {
     setIsSubmitting(true);
     try {
+      // Debug logs
+      console.log('Survey data:', surveyData);
+      console.log('Form data:', formData);
+      
+      // Se não tiver survey data, buscar novamente
+      if (!surveyData) {
+        await loadActiveSurvey();
+      }
+
       const responses = {
         atendimento: formData.satisfaction,
         qualidade_servico: formData.service,
@@ -207,10 +216,26 @@ const SurveyForm = () => {
         bairro: formData.neighborhood
       };
 
+      // Garantir que temos um survey_id válido
+      let surveyId = surveyData?.id;
+      if (!surveyId) {
+        // Buscar qualquer pesquisa ativa
+        const { data: activeSurvey } = await supabase
+          .from('surveys')
+          .select('id')
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+        
+        surveyId = activeSurvey?.id;
+      }
+
+      console.log('Using survey ID:', surveyId);
+
       const { error } = await supabase
         .from('survey_responses')
         .insert({
-          survey_id: surveyData?.id,
+          survey_id: surveyId,
           patient_name: formData.patientName || 'Anônimo',
           patient_phone: formData.phone,
           responses: responses,
