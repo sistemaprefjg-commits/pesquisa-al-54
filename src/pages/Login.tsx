@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Navigate, Link } from 'react-router-dom';
-import { Settings, Shield, Users } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { Shield, Users } from 'lucide-react';
 
 const Login = () => {
   const { login, user } = useAuth();
@@ -155,16 +155,6 @@ const Login = () => {
           </div>
         )}
 
-        {/* Setup Link */}
-        <div className="text-center pt-4">
-          <Link 
-            to="/admin-setup" 
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-            Configuração do Sistema
-          </Link>
-        </div>
       </div>
     </div>
   );

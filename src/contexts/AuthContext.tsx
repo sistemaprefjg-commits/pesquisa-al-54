@@ -71,6 +71,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
+    // Auto-create admin users if they don't exist
+    try {
+      await supabase.functions.invoke('auto-create-admin');
+    } catch (error) {
+      console.log('Auto-create function may not be available yet:', error);
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
