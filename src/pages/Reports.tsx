@@ -503,21 +503,28 @@ const Reports = () => {
             <CardDescription>Últimas avaliações recebidas dos pacientes</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Paciente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Avaliação</TableHead>
-                  <TableHead>Reclamações</TableHead>
-                  <TableHead>Sugestões</TableHead>
-                </TableRow>
-              </TableHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[120px]">Paciente</TableHead>
+                    <TableHead className="min-w-[140px]">Data e Hora</TableHead>
+                    <TableHead className="min-w-[100px]">Avaliação</TableHead>
+                    <TableHead className="min-w-[200px]">Reclamações</TableHead>
+                    <TableHead className="min-w-[200px]">Sugestões</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {recentResponsesData.map((response) => (
                   <TableRow key={response.id}>
                     <TableCell className="font-medium">{response.patient}</TableCell>
-                    <TableCell>{new Date(response.date).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{new Date(response.date).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
@@ -536,22 +543,22 @@ const Reports = () => {
                     <TableCell className="max-w-xs">
                       <div className="text-sm">
                         {response.complaints ? (
-                          <div className="truncate text-red-600" title={response.complaints}>
+                          <div className="text-red-600 whitespace-pre-wrap break-words" title={response.complaints}>
                             {response.complaints}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">Nenhuma reclamação</span>
+                          <span className="text-muted-foreground italic">Nenhuma reclamação</span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="text-sm">
                         {response.suggestions ? (
-                          <div className="truncate text-green-600" title={response.suggestions}>
+                          <div className="text-green-600 whitespace-pre-wrap break-words" title={response.suggestions}>
                             {response.suggestions}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">Nenhuma sugestão</span>
+                          <span className="text-muted-foreground italic">Nenhuma sugestão</span>
                         )}
                       </div>
                     </TableCell>
@@ -559,6 +566,7 @@ const Reports = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
         </>
