@@ -229,121 +229,173 @@ const Reports = () => {
   const generatePDF = async () => {
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       let currentY = 20;
 
-      // Header
+      // Header do PDF
       pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
       pdf.text('Relatório de Satisfação do Paciente', 20, currentY);
       currentY += 10;
 
       pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
       pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 20, currentY);
-      currentY += 15;
+      currentY += 20;
 
-      // KPIs
-      pdf.setFontSize(16);
-      pdf.text('Métricas Principais', 20, currentY);
-      currentY += 10;
-
-      pdf.setFontSize(12);
-      pdf.text(`Total de Pesquisas: ${totalSurveys}`, 20, currentY);
-      pdf.text(`Taxa de Resposta: ${responseRate}%`, 105, currentY);
-      currentY += 8;
-      pdf.text(`Satisfação Média: ${averageSatisfaction}/5.0`, 20, currentY);
-      pdf.text(`Pacientes Únicos: ${uniquePatients}`, 105, currentY);
-      currentY += 15;
-
-      // Distribuição de Satisfação
-      pdf.setFontSize(16);
-      pdf.text('Distribuição de Satisfação', 20, currentY);
-      currentY += 10;
-
-      satisfactionData.forEach((item) => {
-        if (item.value > 0) {
-          pdf.setFontSize(12);
-          pdf.text(`${item.name}: ${item.value} (${Math.round((item.value / totalSurveys) * 100)}%)`, 20, currentY);
-          currentY += 6;
-        }
-      });
-      currentY += 10;
-
-      // Principais Queixas
-      if (mainComplaints.length > 0) {
-        pdf.setFontSize(16);
-        pdf.text('Principais Queixas e Reclamações', 20, currentY);
-        currentY += 10;
-
-        mainComplaints.forEach((complaint, index) => {
-          if (currentY > 250) {
-            pdf.addPage();
-            currentY = 20;
-          }
-          
-          pdf.setFontSize(14);
-          pdf.text(`${index + 1}. ${complaint.category}`, 20, currentY);
-          currentY += 6;
-          
-          pdf.setFontSize(12);
-          pdf.text(`Ocorrências: ${complaint.count} (${complaint.percentage}% das reclamações)`, 25, currentY);
-          currentY += 6;
-          
-          pdf.text(`Severidade: ${complaint.severity === 'high' ? 'Alta' : complaint.severity === 'medium' ? 'Média' : 'Baixa'}`, 25, currentY);
-          currentY += 6;
-          
-          if (complaint.examples.length > 0) {
-            pdf.text('Exemplos:', 25, currentY);
-            currentY += 6;
-            complaint.examples.forEach((example) => {
-              const lines = pdf.splitTextToSize(`• ${example}`, 160);
-              pdf.text(lines, 30, currentY);
-              currentY += lines.length * 6;
-            });
-          }
-          currentY += 8;
+      // Capturar e adicionar os KPIs
+      const kpisSection = document.querySelector('[data-pdf="kpis"]') as HTMLElement;
+      if (kpisSection) {
+        const canvas = await html2canvas(kpisSection, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
         });
-      }
-
-      // Nova página para respostas recentes
-      pdf.addPage();
-      currentY = 20;
-      
-      pdf.setFontSize(16);
-      pdf.text('Respostas Recentes', 20, currentY);
-      currentY += 15;
-
-      recentResponsesData.forEach((response, index) => {
-        if (currentY > 240) {
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 40;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        if (currentY + imgHeight > pageHeight - 20) {
           pdf.addPage();
           currentY = 20;
         }
-
-        pdf.setFontSize(14);
-        pdf.text(`Paciente: ${response.patient}`, 20, currentY);
-        currentY += 6;
         
-        pdf.setFontSize(12);
-        pdf.text(`Data: ${new Date(response.date).toLocaleString('pt-BR')}`, 20, currentY);
-        pdf.text(`Avaliação: ${response.rating}/5`, 105, currentY);
-        currentY += 8;
+        pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
+        currentY += imgHeight + 15;
+      }
 
-        if (response.complaints) {
-          pdf.text('Reclamações:', 20, currentY);
-          currentY += 6;
-          const complaintLines = pdf.splitTextToSize(response.complaints, 160);
-          pdf.text(complaintLines, 25, currentY);
-          currentY += complaintLines.length * 6;
+      // Capturar e adicionar gráficos (primeira linha)
+      const chartsSection1 = document.querySelector('[data-pdf="charts-1"]') as HTMLElement;
+      if (chartsSection1) {
+        if (currentY + 100 > pageHeight - 20) {
+          pdf.addPage();
+          currentY = 20;
         }
+        
+        const canvas = await html2canvas(chartsSection1, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 40;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
+        currentY += imgHeight + 15;
+      }
 
-        if (response.suggestions) {
-          pdf.text('Sugestões:', 20, currentY);
-          currentY += 6;
-          const suggestionLines = pdf.splitTextToSize(response.suggestions, 160);
-          pdf.text(suggestionLines, 25, currentY);
-          currentY += suggestionLines.length * 6;
+      // Nova página para segunda linha de gráficos
+      pdf.addPage();
+      currentY = 20;
+
+      const chartsSection2 = document.querySelector('[data-pdf="charts-2"]') as HTMLElement;
+      if (chartsSection2) {
+        const canvas = await html2canvas(chartsSection2, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 40;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
+        currentY += imgHeight + 15;
+      }
+
+      // Nova página para queixas
+      pdf.addPage();
+      currentY = 20;
+
+      const complaintsSection = document.querySelector('[data-pdf="complaints"]') as HTMLElement;
+      if (complaintsSection) {
+        const canvas = await html2canvas(complaintsSection, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 40;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        // Pode precisar de múltiplas páginas para queixas
+        if (imgHeight > pageHeight - 40) {
+          const pagesNeeded = Math.ceil(imgHeight / (pageHeight - 40));
+          const sectionHeight = (pageHeight - 40);
+          
+          for (let i = 0; i < pagesNeeded; i++) {
+            if (i > 0) {
+              pdf.addPage();
+              currentY = 20;
+            }
+            
+            const yOffset = i * sectionHeight * (canvas.height / imgHeight);
+            const partialCanvas = document.createElement('canvas');
+            partialCanvas.width = canvas.width;
+            partialCanvas.height = Math.min(sectionHeight * (canvas.height / imgHeight), canvas.height - yOffset);
+            
+            const ctx = partialCanvas.getContext('2d');
+            ctx?.drawImage(canvas, 0, yOffset, canvas.width, partialCanvas.height, 0, 0, canvas.width, partialCanvas.height);
+            
+            const partialImgData = partialCanvas.toDataURL('image/png');
+            const partialImgHeight = (partialCanvas.height * imgWidth) / partialCanvas.width;
+            
+            pdf.addImage(partialImgData, 'PNG', 20, currentY, imgWidth, partialImgHeight);
+          }
+        } else {
+          pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
         }
+      }
 
-        currentY += 10;
-      });
+      // Nova página para tabela de respostas
+      pdf.addPage();
+      currentY = 20;
+
+      const responseTableSection = document.querySelector('[data-pdf="responses-table"]') as HTMLElement;
+      if (responseTableSection) {
+        const canvas = await html2canvas(responseTableSection, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - 40;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        if (imgHeight > pageHeight - 40) {
+          const pagesNeeded = Math.ceil(imgHeight / (pageHeight - 40));
+          const sectionHeight = (pageHeight - 40);
+          
+          for (let i = 0; i < pagesNeeded; i++) {
+            if (i > 0) {
+              pdf.addPage();
+              currentY = 20;
+            }
+            
+            const yOffset = i * sectionHeight * (canvas.height / imgHeight);
+            const partialCanvas = document.createElement('canvas');
+            partialCanvas.width = canvas.width;
+            partialCanvas.height = Math.min(sectionHeight * (canvas.height / imgHeight), canvas.height - yOffset);
+            
+            const ctx = partialCanvas.getContext('2d');
+            ctx?.drawImage(canvas, 0, yOffset, canvas.width, partialCanvas.height, 0, 0, canvas.width, partialCanvas.height);
+            
+            const partialImgData = partialCanvas.toDataURL('image/png');
+            const partialImgHeight = (partialCanvas.height * imgWidth) / partialCanvas.width;
+            
+            pdf.addImage(partialImgData, 'PNG', 20, currentY, imgWidth, partialImgHeight);
+          }
+        } else {
+          pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
+        }
+      }
 
       // Salvar o PDF
       pdf.save(`relatorio-satisfacao-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -391,7 +443,7 @@ const Reports = () => {
         ) : (
           <>
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div data-pdf="kpis" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Pesquisas</CardTitle>
@@ -446,7 +498,7 @@ const Reports = () => {
         </div>
 
         {/* Gráficos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div data-pdf="charts-1" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle>Respostas por Período</CardTitle>
@@ -494,7 +546,7 @@ const Reports = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div data-pdf="charts-2" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
               <CardTitle>Evolução da Satisfação</CardTitle>
@@ -548,7 +600,7 @@ const Reports = () => {
         </div>
 
         {/* Principais Queixas */}
-        <Card className="mb-8">
+        <Card data-pdf="complaints" className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
@@ -626,7 +678,7 @@ const Reports = () => {
         </Card>
 
         {/* Tabela de Respostas Recentes */}
-        <Card>
+        <Card data-pdf="responses-table">
           <CardHeader>
             <CardTitle>Respostas Recentes</CardTitle>
             <CardDescription>Últimas avaliações recebidas dos pacientes</CardDescription>
