@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Copy, CheckCircle, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminSetup = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,19 +16,16 @@ const AdminSetup = () => {
     setError(null);
 
     try {
-      const response = await fetch('/supabase/functions/v1/setup-admin-users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const { data, error } = await supabase.functions.invoke('setup-admin-users', {
+        body: {}
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (error) {
+        setError(error.message || 'Erro ao criar usuários');
+      } else if (data?.success) {
         setCredentials(data.credentials);
       } else {
-        setError(data.error || 'Erro ao criar usuários');
+        setError(data?.error || 'Erro ao criar usuários');
       }
     } catch (err) {
       setError('Erro ao conectar com o servidor');
