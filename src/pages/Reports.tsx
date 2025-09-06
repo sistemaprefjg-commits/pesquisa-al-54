@@ -4,12 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { ArrowLeft, Download, TrendingUp, Users, MessageSquare, Star } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ArrowLeft, Download, TrendingUp, Users, MessageSquare, Star, CalendarIcon, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Interface para respostas reais do Supabase
 interface SurveyResponse {
@@ -25,6 +29,8 @@ const Reports = () => {
   const { user } = useAuth();
   const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     loadSurveyData();
@@ -202,10 +208,37 @@ const Reports = () => {
            complaint.severity === 'medium' ? '#f59e0b' : '#22c55e'
   }));
 
-  // Respostas recentes (últimas 5)
-  const recentResponsesData = surveyResponses
+  // Função para filtrar respostas por data
+  const filterResponsesByDate = (responses: SurveyResponse[]) => {
+    let filteredResponses = responses;
+    
+    if (startDate) {
+      filteredResponses = filteredResponses.filter(response => {
+        const responseDate = new Date(response.created_at);
+        return responseDate >= startDate;
+      });
+    }
+    
+    if (endDate) {
+      filteredResponses = filteredResponses.filter(response => {
+        const responseDate = new Date(response.created_at);
+        // Adiciona 23:59:59 ao endDate para incluir todo o dia
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        return responseDate <= endOfDay;
+      });
+    }
+    
+    return filteredResponses;
+  };
+
+  // Respostas filtradas por data
+  const filteredResponses = filterResponsesByDate(surveyResponses);
+  
+  // Respostas recentes (limitadas se não houver filtros)
+  const recentResponsesData = filteredResponses
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5)
+    .slice(0, startDate || endDate ? filteredResponses.length : 10) // Mostra todas se houver filtro, senão limita a 10
     .map(response => ({
       id: response.id,
       patient: response.patient_name,
@@ -214,6 +247,12 @@ const Reports = () => {
       complaints: (response.responses && response.responses.comentarios) || '',
       suggestions: (response.responses && response.responses.sugestoes) || ''
     }));
+
+  // Função para limpar filtros
+  const clearFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
 
   const chartConfig = {
     pesquisas: {
@@ -680,8 +719,89 @@ const Reports = () => {
         {/* Tabela de Respostas Recentes */}
         <Card data-pdf="responses-table">
           <CardHeader>
-            <CardTitle>Respostas Recentes</CardTitle>
-            <CardDescription>Últimas avaliações recebidas dos pacientes</CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>Respostas Recentes</CardTitle>
+                <CardDescription>
+                  {startDate || endDate ? 
+                    `Respostas filtradas${startDate ? ` a partir de ${format(startDate, 'dd/MM/yyyy')}` : ''}${endDate ? ` até ${format(endDate, 'dd/MM/yyyy')}` : ''} - ${recentResponsesData.length} resultado(s)` :
+                    'Últimas avaliações recebidas dos pacientes'
+                  }
+                </CardDescription>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                {/* Filtro Data Inicial */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground">Data Inicial</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-[150px] justify-start text-left font-normal text-xs",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {startDate ? format(startDate, "dd/MM/yyyy") : "Selecionar"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Filtro Data Final */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground">Data Final</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-[150px] justify-start text-left font-normal text-xs",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-3 w-3" />
+                        {endDate ? format(endDate, "dd/MM/yyyy") : "Selecionar"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        disabled={(date) => startDate ? date < startDate : false}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Botão Limpar Filtros */}
+                {(startDate || endDate) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="mt-auto text-xs"
+                  >
+                    <X className="mr-1 h-3 w-3" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
