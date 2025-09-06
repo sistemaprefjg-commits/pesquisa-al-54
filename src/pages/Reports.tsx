@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,159 +7,75 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { ArrowLeft, Download, TrendingUp, Users, MessageSquare, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
 
-// Importando os dados das respostas do formulário
+// Interface para respostas reais do Supabase
 interface SurveyResponse {
   id: string;
-  patientName: string;
-  phone: string;
-  date: string;
-  satisfaction: number;
-  service: string;
-  waiting: string;
-  cleanliness: string;
-  recommendation: string;
-  complaints: string;
-  suggestions: string;
-  status: "pending" | "reviewed" | "resolved";
-  priority: "low" | "medium" | "high";
+  patient_name: string;
+  patient_phone: string;
+  created_at: string;
+  satisfaction_score: number;
+  responses: any;
 }
-
-const surveyResponses: SurveyResponse[] = [
-  {
-    id: "001",
-    patientName: "Maria Silva Santos",
-    phone: "(11) 99999-1111",
-    date: "2024-01-15",
-    satisfaction: 5,
-    service: "Excelente",
-    waiting: "Rápido (16-30 min)",
-    cleanliness: "Excelente", 
-    recommendation: "Sim, com certeza",
-    complaints: "",
-    suggestions: "Parabéns pela qualidade do atendimento!",
-    status: "reviewed",
-    priority: "low"
-  },
-  {
-    id: "002",
-    patientName: "João Oliveira",
-    phone: "(11) 99999-2222",
-    date: "2024-01-15",
-    satisfaction: 2,
-    service: "Ruim",
-    waiting: "Muito demorado (+2 horas)",
-    cleanliness: "Regular",
-    recommendation: "Definitivamente não",
-    complaints: "Esperei mais de 3 horas para ser atendido na emergência. O atendimento foi grosseiro e não me senti acolhido.",
-    suggestions: "Melhorar o tempo de espera e treinamento da equipe.",
-    status: "pending",
-    priority: "high"
-  },
-  {
-    id: "003",
-    patientName: "Ana Costa Lima",
-    phone: "(11) 99999-3333",
-    date: "2024-01-14",
-    satisfaction: 4,
-    service: "Bom",
-    waiting: "Moderado (31-60 min)",
-    cleanliness: "Bom",
-    recommendation: "Sim, provavelmente",
-    complaints: "Faltou alguns medicamentos na farmácia.",
-    suggestions: "Manter sempre estoque completo de medicamentos básicos.",
-    status: "reviewed",
-    priority: "medium"
-  },
-  {
-    id: "004",
-    patientName: "Carlos Pereira",
-    phone: "(11) 99999-4444",
-    date: "2024-01-14",
-    satisfaction: 1,
-    service: "Péssimo",
-    waiting: "Muito demorado (+2 horas)",
-    cleanliness: "Ruim",
-    recommendation: "Definitivamente não",
-    complaints: "Hospital sujo, atendimento péssimo, médico mal educado. Nunca mais volto!",
-    suggestions: "Reformar tudo, trocar toda equipe.",
-    status: "pending",
-    priority: "high"
-  },
-  {
-    id: "005",
-    patientName: "Lucia Fernandes",
-    phone: "(11) 99999-5555",
-    date: "2024-01-13",
-    satisfaction: 4,
-    service: "Bom",
-    waiting: "Rápido (16-30 min)",
-    cleanliness: "Excelente",
-    recommendation: "Sim, com certeza",
-    complaints: "",
-    suggestions: "Continuem assim! Muito bom o novo sistema de agendamento.",
-    status: "resolved",
-    priority: "low"
-  },
-  {
-    id: "006",
-    patientName: "Pedro Santos",
-    phone: "(11) 99999-6666",
-    date: "2024-01-12",
-    satisfaction: 3,
-    service: "Regular",
-    waiting: "Muito demorado (+2 horas)",
-    cleanliness: "Regular",
-    recommendation: "Talvez",
-    complaints: "Demora muito para ser atendido, mais de 2 horas esperando",
-    suggestions: "Organizar melhor as filas de atendimento",
-    status: "reviewed",
-    priority: "medium"
-  },
-  {
-    id: "007",
-    patientName: "Mariana Costa",
-    phone: "(11) 99999-7777",
-    date: "2024-01-11",
-    satisfaction: 2,
-    service: "Ruim",
-    waiting: "Muito demorado (+2 horas)",
-    cleanliness: "Ruim",
-    recommendation: "Definitivamente não",
-    complaints: "Banheiros sujos, limpeza péssima em todo hospital",
-    suggestions: "Melhorar drasticamente a limpeza",
-    status: "pending",
-    priority: "high"
-  },
-  {
-    id: "008",
-    patientName: "Roberto Lima",
-    phone: "(11) 99999-8888",
-    date: "2024-01-10",
-    satisfaction: 1,
-    service: "Péssimo",
-    waiting: "Muito demorado (+2 horas)",
-    cleanliness: "Péssima",
-    recommendation: "Definitivamente não",
-    complaints: "Médico muito grosseiro, não teve paciência para explicar. Atendimento horrível.",
-    suggestions: "Treinar melhor os médicos para atender bem os pacientes",
-    status: "pending",
-    priority: "high"
-  }
-];
 
 const Reports = () => {
   const { user } = useAuth();
+  const [surveyResponses, setSurveyResponses] = useState<SurveyResponse[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadSurveyData();
+
+    // Set up real-time updates
+    const channel = supabase
+      .channel('reports-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'survey_responses'
+        },
+        () => {
+          loadSurveyData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadSurveyData = async () => {
+    try {
+      const { data: responses, error } = await supabase
+        .from('survey_responses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setSurveyResponses(responses || []);
+    } catch (error) {
+      console.error('Error loading survey data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculando métricas baseadas nas respostas reais do formulário
   const totalSurveys = surveyResponses.length;
   const responseRate = 92; // Assumindo que nem todos responderam
-  const averageSatisfaction = (surveyResponses.reduce((sum, response) => sum + response.satisfaction, 0) / totalSurveys).toFixed(1);
+  const averageSatisfaction = surveyResponses.length > 0 
+    ? (surveyResponses.reduce((sum, response) => sum + (response.satisfaction_score || 3), 0) / totalSurveys).toFixed(1)
+    : '0';
   const uniquePatients = surveyResponses.length; // Cada resposta é de um paciente único
 
   // Agrupando por mês para o gráfico
   const monthlyData = surveyResponses.reduce((acc, response) => {
-    const date = new Date(response.date);
+    const date = new Date(response.created_at);
     const monthKey = date.toLocaleDateString('pt-BR', { month: 'short' });
     
     if (!acc[monthKey]) {
@@ -167,7 +83,7 @@ const Reports = () => {
     }
     
     acc[monthKey].pesquisas += 1;
-    acc[monthKey].satisfacaoTotal += response.satisfaction;
+    acc[monthKey].satisfacaoTotal += (response.satisfaction_score || 3);
     acc[monthKey].count += 1;
     
     return acc;
@@ -181,10 +97,11 @@ const Reports = () => {
 
   // Analisando satisfação geral
   const satisfactionDistribution = surveyResponses.reduce((acc, response) => {
-    if (response.satisfaction >= 5) acc.muitoSatisfeito++;
-    else if (response.satisfaction >= 4) acc.satisfeito++;
-    else if (response.satisfaction >= 3) acc.neutro++;
-    else if (response.satisfaction >= 2) acc.insatisfeito++;
+    const score = response.satisfaction_score || 3;
+    if (score >= 5) acc.muitoSatisfeito++;
+    else if (score >= 4) acc.satisfeito++;
+    else if (score >= 3) acc.neutro++;
+    else if (score >= 2) acc.insatisfeito++;
     else acc.muitoInsatisfeito++;
     return acc;
   }, { muitoSatisfeito: 0, satisfeito: 0, neutro: 0, insatisfeito: 0, muitoInsatisfeito: 0 });
@@ -199,7 +116,10 @@ const Reports = () => {
 
   // Analisando principais queixas das respostas reais
   const analyzeComplaints = () => {
-    const complaints = surveyResponses.filter(r => r.complaints.trim() !== '').map(r => r.complaints.toLowerCase());
+    const complaints = surveyResponses
+      .filter(r => r.responses && typeof r.responses === 'object' && r.responses.comentarios)
+      .map(r => r.responses.comentarios.toLowerCase());
+    
     const complaintCategories = {
       'Tempo de Espera': 0,
       'Qualidade do Atendimento': 0,
@@ -219,7 +139,10 @@ const Reports = () => {
     };
 
     complaints.forEach(complaint => {
-      const originalComplaint = surveyResponses.find(r => r.complaints.toLowerCase() === complaint)?.complaints || '';
+      const originalComplaint = surveyResponses.find(r => 
+        r.responses && r.responses.comentarios && 
+        r.responses.comentarios.toLowerCase() === complaint
+      )?.responses.comentarios || '';
       
       if (complaint.includes('espera') || complaint.includes('demora') || complaint.includes('hora')) {
         complaintCategories['Tempo de Espera']++;
@@ -265,14 +188,16 @@ const Reports = () => {
 
   // Respostas recentes (últimas 5)
   const recentResponsesData = surveyResponses
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
     .map(response => ({
       id: response.id,
-      patient: response.patientName,
-      date: response.date,
-      rating: response.satisfaction,
-      feedback: response.complaints || response.suggestions || 'Sem comentários adicionais'
+      patient: response.patient_name,
+      date: response.created_at,
+      rating: response.satisfaction_score || 3,
+      feedback: (response.responses && response.responses.comentarios) || 
+               (response.responses && response.responses.sugestoes) || 
+               'Sem comentários adicionais'
     }));
 
   const chartConfig = {
@@ -314,8 +239,17 @@ const Reports = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+              <p>Carregando relatórios...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Pesquisas</CardTitle>
@@ -453,18 +387,18 @@ const Reports = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Respostas com Reclamações</span>
-                <span className="font-medium">{surveyResponses.filter(r => r.complaints.trim() !== '').length}</span>
+                <span className="font-medium">{surveyResponses.filter(r => r.responses && r.responses.comentarios && r.responses.comentarios.trim() !== '').length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Respostas Positivas (4-5)</span>
                 <span className="font-medium text-green-600">
-                  {surveyResponses.filter(r => r.satisfaction >= 4).length} ({Math.round((surveyResponses.filter(r => r.satisfaction >= 4).length / totalSurveys) * 100)}%)
+                  {surveyResponses.filter(r => (r.satisfaction_score || 3) >= 4).length} ({Math.round((surveyResponses.filter(r => (r.satisfaction_score || 3) >= 4).length / totalSurveys) * 100)}%)
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Respostas Negativas (1-2)</span>
                 <span className="font-medium text-red-600">
-                  {surveyResponses.filter(r => r.satisfaction <= 2).length} ({Math.round((surveyResponses.filter(r => r.satisfaction <= 2).length / totalSurveys) * 100)}%)
+                  {surveyResponses.filter(r => (r.satisfaction_score || 3) <= 2).length} ({Math.round((surveyResponses.filter(r => (r.satisfaction_score || 3) <= 2).length / totalSurveys) * 100)}%)
                 </span>
               </div>
             </CardContent>
@@ -592,6 +526,8 @@ const Reports = () => {
             </Table>
           </CardContent>
         </Card>
+        </>
+      )}
       </main>
     </div>
   );
