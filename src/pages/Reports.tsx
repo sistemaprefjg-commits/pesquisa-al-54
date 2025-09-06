@@ -116,9 +116,19 @@ const Reports = () => {
 
   // Analisando principais queixas das respostas reais
   const analyzeComplaints = () => {
-    const complaints = surveyResponses
-      .filter(r => r.responses && typeof r.responses === 'object' && r.responses.comentarios)
-      .map(r => r.responses.comentarios.toLowerCase());
+    const allComments = surveyResponses
+      .filter(r => r.responses && typeof r.responses === 'object')
+      .map(r => {
+        const comments = [];
+        if (r.responses.comentarios && r.responses.comentarios.trim() !== '') {
+          comments.push(r.responses.comentarios.toLowerCase());
+        }
+        if (r.responses.sugestoes && r.responses.sugestoes.trim() !== '') {
+          comments.push(r.responses.sugestoes.toLowerCase());
+        }
+        return comments;
+      })
+      .flat();
     
     const complaintCategories = {
       'Tempo de Espera': 0,
@@ -138,27 +148,31 @@ const Reports = () => {
       'Agendamento': [] as string[],
     };
 
-    complaints.forEach(complaint => {
-      const originalComplaint = surveyResponses.find(r => 
-        r.responses && r.responses.comentarios && 
-        r.responses.comentarios.toLowerCase() === complaint
-      )?.responses.comentarios || '';
+    allComments.forEach(comment => {
+      const originalComment = surveyResponses.find(r => 
+        (r.responses && r.responses.comentarios && 
+         r.responses.comentarios.toLowerCase() === comment) ||
+        (r.responses && r.responses.sugestoes && 
+         r.responses.sugestoes.toLowerCase() === comment)
+      );
       
-      if (complaint.includes('espera') || complaint.includes('demora') || complaint.includes('hora')) {
+      const original = originalComment?.responses?.comentarios || originalComment?.responses?.sugestoes || '';
+      
+      if (comment.includes('espera') || comment.includes('demora') || comment.includes('hora')) {
         complaintCategories['Tempo de Espera']++;
-        if (examples['Tempo de Espera'].length < 3) examples['Tempo de Espera'].push(originalComplaint);
+        if (examples['Tempo de Espera'].length < 3) examples['Tempo de Espera'].push(original);
       }
-      if (complaint.includes('atendimento') || complaint.includes('grosso') || complaint.includes('mal educado') || complaint.includes('médico')) {
+      if (comment.includes('atendimento') || comment.includes('grosso') || comment.includes('mal educado') || comment.includes('médico')) {
         complaintCategories['Qualidade do Atendimento']++;
-        if (examples['Qualidade do Atendimento'].length < 3) examples['Qualidade do Atendimento'].push(originalComplaint);
+        if (examples['Qualidade do Atendimento'].length < 3) examples['Qualidade do Atendimento'].push(original);
       }
-      if (complaint.includes('sujo') || complaint.includes('limpeza') || complaint.includes('banheiro') || complaint.includes('higiene')) {
+      if (comment.includes('sujo') || comment.includes('limpeza') || comment.includes('banheiro') || comment.includes('higiene')) {
         complaintCategories['Limpeza e Higiene']++;
-        if (examples['Limpeza e Higiene'].length < 3) examples['Limpeza e Higiene'].push(originalComplaint);
+        if (examples['Limpeza e Higiene'].length < 3) examples['Limpeza e Higiene'].push(original);
       }
-      if (complaint.includes('medicamento') || complaint.includes('farmácia') || complaint.includes('remédio')) {
+      if (comment.includes('medicamento') || comment.includes('farmácia') || comment.includes('remédio')) {
         complaintCategories['Disponibilidade de Medicamentos']++;
-        if (examples['Disponibilidade de Medicamentos'].length < 3) examples['Disponibilidade de Medicamentos'].push(originalComplaint);
+        if (examples['Disponibilidade de Medicamentos'].length < 3) examples['Disponibilidade de Medicamentos'].push(original);
       }
     });
 
@@ -195,9 +209,8 @@ const Reports = () => {
       patient: response.patient_name,
       date: response.created_at,
       rating: response.satisfaction_score || 3,
-      feedback: (response.responses && response.responses.comentarios) || 
-               (response.responses && response.responses.sugestoes) || 
-               'Sem comentários adicionais'
+      complaints: (response.responses && response.responses.comentarios) || '',
+      suggestions: (response.responses && response.responses.sugestoes) || ''
     }));
 
   const chartConfig = {
@@ -387,7 +400,7 @@ const Reports = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Respostas com Reclamações</span>
-                <span className="font-medium">{surveyResponses.filter(r => r.responses && r.responses.comentarios && r.responses.comentarios.trim() !== '').length}</span>
+                <span className="font-medium">{surveyResponses.filter(r => r.responses && ((r.responses.comentarios && r.responses.comentarios.trim() !== '') || (r.responses.sugestoes && r.responses.sugestoes.trim() !== ''))).length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Respostas Positivas (4-5)</span>
@@ -496,7 +509,8 @@ const Reports = () => {
                   <TableHead>Paciente</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Avaliação</TableHead>
-                  <TableHead>Comentário</TableHead>
+                  <TableHead>Reclamações</TableHead>
+                  <TableHead>Sugestões</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -519,7 +533,28 @@ const Reports = () => {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{response.feedback}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="text-sm">
+                        {response.complaints ? (
+                          <div className="truncate text-red-600" title={response.complaints}>
+                            {response.complaints}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Nenhuma reclamação</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="text-sm">
+                        {response.suggestions ? (
+                          <div className="truncate text-green-600" title={response.suggestions}>
+                            {response.suggestions}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Nenhuma sugestão</span>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
