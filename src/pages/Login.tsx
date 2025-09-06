@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Navigate, Link } from 'react-router-dom';
 import { Settings, Shield, Users } from 'lucide-react';
 
 const Login = () => {
   const { login, user } = useAuth();
+  const [adminPassword, setAdminPassword] = useState('');
+  const [receptionPassword, setReceptionPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,11 +20,12 @@ const Login = () => {
     return <Navigate to={user.role === 'admin' ? '/dashboard' : '/whatsapp'} replace />;
   }
 
-  const handleAdminLogin = async () => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    const result = await login('admin@hospital.com', 'Hospital@Admin2024');
+    const result = await login('admin@hospital.com', adminPassword);
     
     if (result.error) {
       setError(result.error);
@@ -29,11 +34,12 @@ const Login = () => {
     setIsLoading(false);
   };
 
-  const handleReceptionLogin = async () => {
+  const handleReceptionLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    const result = await login('recepcao@hospital.com', 'Recepcao@2024');
+    const result = await login('recepcao@hospital.com', receptionPassword);
     
     if (result.error) {
       setError(result.error);
@@ -73,26 +79,31 @@ const Login = () => {
                 </div>
               </div>
               <CardTitle className="text-xl">Administração</CardTitle>
-              <CardDescription>
-                Acesso completo ao sistema para gestores e administradores
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center space-y-2 text-sm text-muted-foreground">
-                <p>• Dashboard completo</p>
-                <p>• Relatórios detalhados</p>
-                <p>• Gestão de usuários</p>
-                <p>• Configurações avançadas</p>
-              </div>
-              
-              <Button 
-                onClick={handleAdminLogin}
-                disabled={isLoading}
-                className="w-full h-12 text-lg"
-                size="lg"
-              >
-                {isLoading ? 'Entrando...' : 'Entrar como Administrador'}
-              </Button>
+            <CardContent>
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="admin-password">Senha</Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    placeholder="Digite a senha de administrador"
+                  />
+                </div>
+                
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 text-lg"
+                  size="lg"
+                >
+                  {isLoading ? 'Entrando...' : 'Entrar como Administrador'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
 
@@ -105,27 +116,32 @@ const Login = () => {
                 </div>
               </div>
               <CardTitle className="text-xl">Recepção</CardTitle>
-              <CardDescription>
-                Acesso operacional para equipe de atendimento e recepcionistas
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center space-y-2 text-sm text-muted-foreground">
-                <p>• Envio de pesquisas WhatsApp</p>
-                <p>• Cadastro de pacientes</p>
-                <p>• Visualização de respostas</p>
-                <p>• Relatórios básicos</p>
-              </div>
-              
-              <Button 
-                onClick={handleReceptionLogin}
-                disabled={isLoading}
-                className="w-full h-12 text-lg"
-                variant="secondary"
-                size="lg"
-              >
-                {isLoading ? 'Entrando...' : 'Entrar como Recepção'}
-              </Button>
+            <CardContent>
+              <form onSubmit={handleReceptionLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reception-password">Senha</Label>
+                  <Input
+                    id="reception-password"
+                    type="password"
+                    value={receptionPassword}
+                    onChange={(e) => setReceptionPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    placeholder="Digite a senha de recepção"
+                  />
+                </div>
+                
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 text-lg"
+                  variant="secondary"
+                  size="lg"
+                >
+                  {isLoading ? 'Entrando...' : 'Entrar como Recepção'}
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>
