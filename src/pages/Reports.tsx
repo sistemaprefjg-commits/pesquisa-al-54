@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 // Interface para respostas reais do Supabase
@@ -724,7 +725,7 @@ const Reports = () => {
                 <CardTitle>Respostas Recentes</CardTitle>
                 <CardDescription>
                   {startDate || endDate ? 
-                    `Respostas filtradas${startDate ? ` a partir de ${format(startDate, 'dd/MM/yyyy')}` : ''}${endDate ? ` até ${format(endDate, 'dd/MM/yyyy')}` : ''} - ${recentResponsesData.length} resultado(s)` :
+                    `Respostas filtradas${startDate ? ` a partir de ${format(startDate, 'dd/MM/yyyy', { locale: ptBR })}` : ''}${endDate ? ` até ${format(endDate, 'dd/MM/yyyy', { locale: ptBR })}` : ''} - ${recentResponsesData.length} resultado(s)` :
                     'Últimas avaliações recebidas dos pacientes'
                   }
                 </CardDescription>
@@ -744,7 +745,7 @@ const Reports = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-3 w-3" />
-                        {startDate ? format(startDate, "dd/MM/yyyy") : "Selecionar"}
+                        {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -753,6 +754,7 @@ const Reports = () => {
                         selected={startDate}
                         onSelect={setStartDate}
                         initialFocus
+                        locale={ptBR}
                         className={cn("p-3 pointer-events-auto")}
                       />
                     </PopoverContent>
@@ -772,7 +774,7 @@ const Reports = () => {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-3 w-3" />
-                        {endDate ? format(endDate, "dd/MM/yyyy") : "Selecionar"}
+                        {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -781,6 +783,7 @@ const Reports = () => {
                         selected={endDate}
                         onSelect={setEndDate}
                         initialFocus
+                        locale={ptBR}
                         className={cn("p-3 pointer-events-auto")}
                         disabled={(date) => startDate ? date < startDate : false}
                       />
