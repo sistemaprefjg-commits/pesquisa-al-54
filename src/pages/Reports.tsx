@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,15 @@ import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 // Interface para respostas reais do Supabase
 interface SurveyResponse {
@@ -32,6 +41,8 @@ const Reports = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
 
   useEffect(() => {
     loadSurveyData();
@@ -237,9 +248,9 @@ const Reports = () => {
   const filteredResponses = filterResponsesByDate(surveyResponses);
   
   // Respostas recentes (limitadas se não houver filtros)
-  const recentResponsesData = filteredResponses
+  const allRecentResponses = filteredResponses
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, startDate || endDate ? filteredResponses.length : 10) // Mostra todas se houver filtro, senão limita a 10
+    .slice(0, startDate || endDate ? filteredResponses.length : undefined) // Mostra todas se houver filtro, senão mostra todas também
     .map(response => ({
       id: response.id,
       patient: response.patient_name,
@@ -248,6 +259,19 @@ const Reports = () => {
       complaints: (response.responses && response.responses.comentarios) || '',
       suggestions: (response.responses && response.responses.sugestoes) || ''
     }));
+
+  // Paginação
+  const totalPages = Math.ceil(allRecentResponses.length / itemsPerPage);
+  const recentResponsesData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allRecentResponses.slice(startIndex, endIndex);
+  }, [allRecentResponses, currentPage]);
+
+  // Resetar página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [startDate, endDate]);
 
   // Função para limpar filtros
   const clearFilters = () => {
@@ -872,6 +896,78 @@ const Reports = () => {
             </Table>
             </div>
           </CardContent>
+          
+          {/* Paginação - mostrar apenas se houver mais de uma página */}
+          {totalPages > 1 && (
+            <div className="px-6 pb-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {/* Páginas */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(pageNum);
+                          }}
+                          isActive={currentPage === pageNum}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  
+                  {/* Ellipsis se necessário */}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              
+              <div className="text-center text-sm text-muted-foreground mt-4">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, allRecentResponses.length)} de {allRecentResponses.length} resultado(s)
+              </div>
+            </div>
+          )}
         </Card>
         </>
       )}
