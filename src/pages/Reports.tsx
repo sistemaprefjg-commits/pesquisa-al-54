@@ -261,12 +261,13 @@ const Reports = () => {
     }));
 
   // Paginação
-  const totalPages = Math.ceil(allRecentResponses.length / itemsPerPage);
+  const totalPages = Math.ceil((allRecentResponses?.length || 0) / itemsPerPage);
   const recentResponsesData = useMemo(() => {
+    if (!allRecentResponses) return [];
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return allRecentResponses.slice(startIndex, endIndex);
-  }, [allRecentResponses, currentPage]);
+  }, [allRecentResponses, currentPage, itemsPerPage]);
 
   // Resetar página quando filtros mudam
   useEffect(() => {
@@ -964,7 +965,7 @@ const Reports = () => {
               </Pagination>
               
               <div className="text-center text-sm text-muted-foreground mt-4">
-                Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, allRecentResponses.length)} de {allRecentResponses.length} resultado(s)
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, allRecentResponses?.length || 0)} de {allRecentResponses?.length || 0} resultado(s)
               </div>
             </div>
           )}
