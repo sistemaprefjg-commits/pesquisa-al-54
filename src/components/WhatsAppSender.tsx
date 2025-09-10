@@ -22,7 +22,7 @@ const WhatsAppSender = () => {
   const [isSending, setIsSending] = useState(false);
 
   // URL do formulário de pesquisa
-  const surveyUrl = `${window.location.origin}/survey`;
+  const surveyUrl = `${window.location.origin}/formulario`;
 
   const generateMessage = (name: string) => {
     return `Olá ${name || 'cidadão'}! 👋

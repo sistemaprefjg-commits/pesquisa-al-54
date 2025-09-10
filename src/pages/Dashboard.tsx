@@ -58,7 +58,7 @@ const Dashboard = () => {
                 Visualizar formulário de pesquisa
               </CardDescription>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/survey">Ver Formulário</Link>
+                <Link to="/formulario">Ver Formulário</Link>
               </Button>
             </CardContent>
           </Card>
