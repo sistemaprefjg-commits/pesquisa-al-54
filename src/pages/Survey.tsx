@@ -50,15 +50,6 @@ const Survey = () => {
           <p className="text-xs text-muted-foreground">
             Suas respostas são confidenciais e nos ajudam a melhorar nossos serviços
           </p>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="mt-4"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar ao Sistema
-          </Button>
         </div>
       </footer>
     </div>
