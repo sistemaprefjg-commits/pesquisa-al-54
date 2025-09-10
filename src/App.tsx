@@ -52,7 +52,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="/survey" element={<Survey />} />
+            <Route path="/formulario" element={<Survey />} />
             <Route path="/survey-success" element={<SurveySuccess />} />
             
             <Route path="/unauthorized" element={<Unauthorized />} />
