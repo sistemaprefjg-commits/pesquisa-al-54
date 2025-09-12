@@ -20,22 +20,63 @@ const WhatsAppSender = () => {
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [messageVariationIndex, setMessageVariationIndex] = useState(0);
 
   // URL do formulário de pesquisa
   const surveyUrl = `${window.location.origin}/formulario`;
 
-  const generateMessage = (name: string) => {
-    return `Olá ${name || 'cidadão'}! 👋
+  // Variações de mensagem para evitar SPAM
+  const messageVariations = [
+    {
+      greeting: "Olá ${name}! 👋",
+      intro: "Sua opinião é muito importante para melhorarmos nosso atendimento.",
+      action: "Por favor, responda nossa breve pesquisa de satisfação:",
+      features: ["⏰ Apenas 2 minutos", "📝 Totalmente confidencial", "💙 Nos ajuda a cuidar melhor de você"],
+      closing: "Muito obrigado pelo seu tempo!"
+    },
+    {
+      greeting: "Oi ${name}! 😊",
+      intro: "Queremos saber como foi sua experiência conosco hoje.",
+      action: "Compartilhe sua opinião nesta pesquisa rápida:",
+      features: ["🕐 Super rápido - 2 min", "🔒 Suas respostas são privadas", "❤️ Sua avaliação nos motiva"],
+      closing: "Agradecemos sua colaboração!"
+    },
+    {
+      greeting: "Prezado(a) ${name}! ✨",
+      intro: "Seu feedback é fundamental para aprimorarmos nossos serviços.",
+      action: "Dedique alguns minutos para avaliar seu atendimento:",
+      features: ["⚡ Questionário de 2 minutos", "🛡️ Informações protegidas", "🌟 Ajude-nos a melhorar sempre"],
+      closing: "Obrigado por nos ajudar a crescer!"
+    },
+    {
+      greeting: "Olá ${name}! 🤗",
+      intro: "Esperamos que tenha tido uma boa experiência em nosso hospital.",
+      action: "Conte-nos como foi através desta pesquisa:",
+      features: ["⌚ Só 2 minutinhos", "🤐 Respostas confidenciais", "💝 Cada opinião importa muito"],
+      closing: "Gratidão por sua participação!"
+    },
+    {
+      greeting: "Oi ${name}! 👩‍⚕️",
+      intro: "Sua avaliação é essencial para continuarmos evoluindo.",
+      action: "Responda nossa pesquisa de satisfação:",
+      features: ["🚀 Rápido - 2 minutos", "🔐 Dados seguros e sigilosos", "💪 Juntos melhoramos o atendimento"],
+      closing: "Muito obrigado pela confiança!"
+    }
+  ];
 
-Sua opinião é importante para melhorarmos. Responda nossa pesquisa de satisfação após o seu atendimento:
+  const generateMessage = (name: string) => {
+    const variation = messageVariations[messageVariationIndex];
+    const greeting = variation.greeting.replace('${name}', name || 'cidadão');
+    
+    return `${greeting}
+
+${variation.intro} ${variation.action}
 
 ${surveyUrl}
 
-⏰ 2 minutos
-📝 Confidencial
-💙 Nos ajuda a cuidar melhor
+${variation.features.join('\n')}
 
-Obrigado!
+${variation.closing}
 Hospital Municipal Ana Anita Gomes Fragoso`;
   };
 
@@ -133,6 +174,9 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     setCustomMessage("");
     setIsEditingMessage(false);
     setIsSending(false);
+    
+    // Rotacionar para próxima variação de mensagem
+    setMessageVariationIndex((prev) => (prev + 1) % messageVariations.length);
   };
 
   return (
