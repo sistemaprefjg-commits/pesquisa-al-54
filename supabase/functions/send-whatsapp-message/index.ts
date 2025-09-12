@@ -30,32 +30,76 @@ serve(async (req) => {
     const formattedPhone = phone.replace(/\D/g, '');
     const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`;
 
-    // Enviar mensagem através da MegaAPI
-    const megaApiUrl = `https://${megaApiHost}/api/message/sendText/${megaApiInstanceKey}`;
-    
-    const megaApiResponse = await fetch(megaApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${megaApiToken}`,
-      },
-      body: JSON.stringify({
-        number: phoneWithCountry,
-        textMessage: {
-          text: message
-        }
-      }),
-    });
+    // Enviar mensagem através da MegaAPI (com tentativas de compatibilidade)
+    const endpoints = [
+      `https://${megaApiHost}/api/message/sendText/${megaApiInstanceKey}`,
+      `https://${megaApiHost}/message/sendText/${megaApiInstanceKey}`,
+      `https://${megaApiHost}/api/messages/sendText/${megaApiInstanceKey}`,
+      `https://${megaApiHost}/api/message/send-text/${megaApiInstanceKey}`,
+      `https://${megaApiHost}/api/v1/message/sendText/${megaApiInstanceKey}`,
+    ];
 
-    const megaApiResult = await megaApiResponse.json();
-    console.log('Resposta da MegaAPI:', megaApiResult);
+    const payloads = [
+      { number: phoneWithCountry, textMessage: { text: message } },
+      { number: phoneWithCountry, message },
+    ];
+
+    let megaApiResponse: Response | null = null;
+    let megaApiResult: any = null;
+    let endpointUsed: string | null = null;
+    let payloadUsed: 'textMessage' | 'message' | null = null;
+
+    for (const url of endpoints) {
+      for (const body of payloads) {
+        console.log('Tentando envio MegaAPI', { url, payloadType: body.textMessage ? 'textMessage' : 'message' });
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${megaApiToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        const json = await resp.json().catch(() => ({}));
+        console.log('Resposta tentativa MegaAPI:', { status: resp.status, ok: resp.ok, body: json });
+
+        if (resp.ok) {
+          megaApiResponse = resp;
+          megaApiResult = json;
+          endpointUsed = url;
+          payloadUsed = body.textMessage ? 'textMessage' : 'message';
+          break;
+        }
+      }
+      if (megaApiResponse?.ok) break;
+    }
+
+    if (!megaApiResponse) {
+      // Última tentativa com o primeiro endpoint para expor erro
+      const fallbackUrl = endpoints[0];
+      megaApiResponse = await fetch(fallbackUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${megaApiToken}`,
+        },
+        body: JSON.stringify(payloads[0]),
+      });
+      megaApiResult = await megaApiResponse.json().catch(() => ({}));
+      endpointUsed = fallbackUrl;
+      payloadUsed = 'textMessage';
+    }
+
+    console.log('Resposta da MegaAPI (final):', { endpointUsed, payloadUsed, status: megaApiResponse.status, ok: megaApiResponse.ok, body: megaApiResult });
 
     let status = 'pending';
-    if (megaApiResponse.ok && megaApiResult.success) {
+    const success = megaApiResponse.ok && !megaApiResult?.error && megaApiResult?.statusCode !== 404;
+    if (success) {
       status = 'sent';
     } else {
       status = 'failed';
-      console.error('Erro na MegaAPI:', megaApiResult);
+      console.error('Erro na MegaAPI:', { endpointUsed, payloadUsed, body: megaApiResult });
     }
 
     // Registrar a mensagem no banco de dados
@@ -78,10 +122,12 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ 
-      success: megaApiResponse.ok && megaApiResult.success,
-      status: status,
+      success,
+      status,
       megaApiResponse: megaApiResult,
-      phoneUsed: phoneWithCountry
+      phoneUsed: phoneWithCountry,
+      endpointUsed,
+      payloadUsed
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
