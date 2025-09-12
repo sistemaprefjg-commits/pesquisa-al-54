@@ -108,7 +108,7 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     }
   };
 
-  const sendViaWhatsAppWeb = async () => {
+  const sendViaMegaAPI = async () => {
     if (!patientData.phone) {
       toast({
         title: "Erro",
@@ -140,55 +140,50 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     }
     
     setTimeout(async () => {
-      const finalMessage = getCurrentMessage();
-    
-    // Limitar o tamanho da mensagem para evitar bloqueios
-    const maxLength = 1000;
-    const truncatedMessage = finalMessage.length > maxLength 
-      ? finalMessage.substring(0, maxLength) + '...' 
-      : finalMessage;
-    
-    const encodedMessage = encodeURIComponent(truncatedMessage);
-    const phone = patientData.phone.replace(/\D/g, '');
-    
-    // Adicionar código do país se não estiver presente
-    const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
-    
-    const whatsappUrl = `https://wa.me/${fullPhone}?text=${encodedMessage}`;
-    
-    // Verificar se a URL não está muito longa
-    if (whatsappUrl.length > 2000) {
-      toast({
-        title: "Mensagem muito longa",
-        description: "Por favor, reduza o tamanho da mensagem.",
-        variant: "destructive",
-      });
-      setIsSending(false);
-      return;
-    }
-    
-      // Registrar o envio no banco
-      await logWhatsAppMessage(
-        fullPhone, 
-        truncatedMessage, 
-        patientData.name, 
-        currentTemplate?.id, 
-        delayMs
-      );
-      
-      window.open(whatsappUrl, '_blank');
-    
-      toast({
-        title: "WhatsApp Aberto!",
-        description: "A mensagem foi preparada. Clique em enviar no WhatsApp.",
-      });
+      try {
+        const finalMessage = getCurrentMessage();
+        
+        // Enviar mensagem via MegaAPI
+        const response = await supabase.functions.invoke('send-whatsapp-message', {
+          body: {
+            phone: patientData.phone,
+            message: finalMessage,
+            patientName: patientData.name,
+            userId: user?.id
+          }
+        });
 
-      // Limpar formulário após envio
-      setPatientData({ name: "", phone: "", additionalMessage: "" });
-      setCustomMessage("");
-      setIsEditingMessage(false);
-      setCurrentTemplate(null);
-      setIsSending(false);
+        if (response.error) {
+          throw new Error(response.error.message);
+        }
+
+        const result = response.data;
+        
+        if (result.success) {
+          toast({
+            title: "Mensagem Enviada!",
+            description: `Mensagem enviada com sucesso para ${patientData.name} (${result.phoneUsed})`,
+          });
+        } else {
+          throw new Error(result.error || 'Erro ao enviar mensagem');
+        }
+
+        // Limpar formulário após envio
+        setPatientData({ name: "", phone: "", additionalMessage: "" });
+        setCustomMessage("");
+        setIsEditingMessage(false);
+        setCurrentTemplate(null);
+        
+      } catch (error) {
+        console.error('Erro ao enviar mensagem:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao enviar mensagem via API",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSending(false);
+      }
     }, delayMs > 120000 ? delayMs : 0); // Só aplica delay se > 2min, senão envia imediatamente
   };
 
@@ -298,31 +293,31 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
         </CardContent>
       </Card>
 
-      {/* WhatsApp Web Sender */}
+      {/* MegaAPI Sender */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-success" />
-            Enviar via WhatsApp
+            Enviar via API
           </CardTitle>
           <CardDescription>
-            Abre o WhatsApp Web com a mensagem e link do formulário preparados
+            Envia a mensagem diretamente através da MegaAPI
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button 
-            onClick={sendViaWhatsAppWeb}
+            onClick={sendViaMegaAPI}
             className="w-full"
             size="lg"
             disabled={!patientData.phone || isSending || !status.canSend}
           >
             <MessageSquare className="h-4 w-4 mr-2" />
-            {isSending ? 'Preparando...' : 
+            {isSending ? 'Enviando...' : 
              !status.canSend ? 'Aguarde para enviar' : 
-             'Enviar para WhatsApp'}
+             'Enviar via API'}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
-            * Certifique-se de estar logado no WhatsApp Web
+            * Mensagem será enviada diretamente via MegaAPI
           </p>
         </CardContent>
       </Card>
@@ -339,9 +334,9 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Preencha o nome e telefone da pessoa</li>
                 <li>• Adicione uma mensagem personalizada se desejar</li>
-                <li>• Clique em "Enviar para WhatsApp"</li>
-                <li>• O WhatsApp Web abrirá com a mensagem pronta</li>
-                <li>• Clique em enviar no WhatsApp para finalizar</li>
+                <li>• Clique em "Enviar via API"</li>
+                <li>• A mensagem será enviada diretamente pela MegaAPI</li>
+                <li>• Aguarde a confirmação de entrega</li>
               </ul>
             </div>
             <div>
