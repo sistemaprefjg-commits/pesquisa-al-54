@@ -10,7 +10,7 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const megaApiHost = Deno.env.get('MEGAAPI_HOST')!;
-const megaApiInstanceKey = Deno.env.get('MEGAAPI_INSTANCE_KEY')!;
+const megaApiInstanceId = Deno.env.get('MEGAAPI_INSTANCE_KEY')!; // Na verdade é o ID único
 const megaApiToken = Deno.env.get('MEGAAPI_TOKEN')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -27,7 +27,7 @@ serve(async (req) => {
     console.log('Enviando mensagem via MegaAPI:', { phone, patientName, message });
     console.log('Dados da instância:', { 
       host: megaApiHost, 
-      instanceKey: megaApiInstanceKey, 
+      instanceId: megaApiInstanceId, 
       tokenLength: megaApiToken?.length 
     });
 
@@ -41,20 +41,20 @@ serve(async (req) => {
     const base = `https://${megaApiHost}`.replace(/\/$/, '');
 
     const endpoints = [
-      `${base}/api/message/sendText/${megaApiInstanceKey}`,
-      `${base}/message/sendText/${megaApiInstanceKey}`,
-      `${base}/api/messages/sendText/${megaApiInstanceKey}`,
-      `${base}/api/message/send-text/${megaApiInstanceKey}`,
-      `${base}/api/v1/message/sendText/${megaApiInstanceKey}`,
+      `${base}/api/message/sendText/${megaApiInstanceId}`,
+      `${base}/message/sendText/${megaApiInstanceId}`,
+      `${base}/api/messages/sendText/${megaApiInstanceId}`,
+      `${base}/api/message/send-text/${megaApiInstanceId}`,
+      `${base}/api/v1/message/sendText/${megaApiInstanceId}`,
       // Estruturas onde o instanceId vem antes
-      `${base}/api/instance/${megaApiInstanceKey}/message/sendText`,
-      `${base}/api/instances/${megaApiInstanceKey}/message/sendText`,
-      `${base}/api/instances/${megaApiInstanceKey}/sendText`,
-      `${base}/api/${megaApiInstanceKey}/message/sendText`,
+      `${base}/api/instance/${megaApiInstanceId}/message/sendText`,
+      `${base}/api/instances/${megaApiInstanceId}/message/sendText`,
+      `${base}/api/instances/${megaApiInstanceId}/sendText`,
+      `${base}/api/${megaApiInstanceId}/message/sendText`,
       // Query params
-      `${base}/message/sendText?instanceKey=${megaApiInstanceKey}`,
-      `${base}/api/message/sendText?instanceKey=${megaApiInstanceKey}`,
-      `${base}/api/message/sendText?session=${megaApiInstanceKey}`,
+      `${base}/message/sendText?instanceKey=${megaApiInstanceId}`,
+      `${base}/api/message/sendText?instanceKey=${megaApiInstanceId}`,
+      `${base}/api/message/sendText?session=${megaApiInstanceId}`,
     ];
 
     const payloads: Array<{ [k: string]: unknown, _type?: string }> = [
@@ -117,7 +117,7 @@ serve(async (req) => {
 
     // Se nada funcionou, realiza uma tentativa final para log detalhado
     if (!finalOk) {
-      const fallbackUrl = `${base}/api/message/sendText/${megaApiInstanceKey}`;
+      const fallbackUrl = `${base}/api/message/sendText/${megaApiInstanceId}`;
       try {
         megaApiResponse = await fetch(fallbackUrl, {
           method: 'POST',
