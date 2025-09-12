@@ -155,33 +155,119 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_message_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          template_text: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_text: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          template_text?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       whatsapp_messages: {
         Row: {
+          attempted_at: string | null
+          delay_applied_seconds: number | null
           id: string
           message: string
           patient_name: string | null
           phone: string
+          safety_status: string | null
           sent_at: string
           sent_by: string | null
           status: string | null
+          template_used_id: string | null
         }
         Insert: {
+          attempted_at?: string | null
+          delay_applied_seconds?: number | null
           id?: string
           message: string
           patient_name?: string | null
           phone: string
+          safety_status?: string | null
           sent_at?: string
           sent_by?: string | null
           status?: string | null
+          template_used_id?: string | null
         }
         Update: {
+          attempted_at?: string | null
+          delay_applied_seconds?: number | null
           id?: string
           message?: string
           patient_name?: string | null
           phone?: string
+          safety_status?: string | null
           sent_at?: string
           sent_by?: string | null
           status?: string | null
+          template_used_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_template_used_id_fkey"
+            columns: ["template_used_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_message_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_safety_config: {
+        Row: {
+          created_at: string
+          daily_warming_limit: number
+          id: string
+          max_delay_minutes: number
+          max_messages_per_day: number
+          max_messages_per_hour: number
+          min_delay_minutes: number
+          updated_at: string
+          user_id: string
+          warming_mode: boolean
+        }
+        Insert: {
+          created_at?: string
+          daily_warming_limit?: number
+          id?: string
+          max_delay_minutes?: number
+          max_messages_per_day?: number
+          max_messages_per_hour?: number
+          min_delay_minutes?: number
+          updated_at?: string
+          user_id: string
+          warming_mode?: boolean
+        }
+        Update: {
+          created_at?: string
+          daily_warming_limit?: number
+          id?: string
+          max_delay_minutes?: number
+          max_messages_per_day?: number
+          max_messages_per_hour?: number
+          min_delay_minutes?: number
+          updated_at?: string
+          user_id?: string
+          warming_mode?: boolean
         }
         Relationships: []
       }
