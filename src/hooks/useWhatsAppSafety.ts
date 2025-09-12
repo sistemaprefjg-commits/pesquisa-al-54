@@ -25,10 +25,10 @@ export const useWhatsAppSafety = () => {
   const [config, setConfig] = useState<SafetyConfig>({
     max_messages_per_hour: 20,
     max_messages_per_day: 50,
-    min_delay_minutes: 2,
-    max_delay_minutes: 5,
-    warming_mode: true,
-    daily_warming_limit: 10
+    min_delay_minutes: 0,  // Removido delay para teste
+    max_delay_minutes: 1,  // Delay mínimo para teste
+    warming_mode: false,   // Desabilitado para teste
+    daily_warming_limit: 5
   });
   
   const [status, setStatus] = useState<SafetyStatus>({
