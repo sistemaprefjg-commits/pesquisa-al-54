@@ -194,18 +194,6 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
 
   return (
     <div className="space-y-6">
-      {/* Painel de Status de Segurança */}
-      <SafetyStatusPanel 
-        status={status}
-        config={config}
-        lastSendTime={lastSendTime}
-      />
-
-      {/* Painel de Configurações de Segurança */}
-      <SafetyConfigPanel 
-        config={config}
-        onUpdateConfig={updateConfig}
-      />
       {/* Patient Data Form */}
       <Card className="shadow-card">
         <CardHeader>
@@ -370,6 +358,19 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
           </div>
         </CardContent>
       </Card>
+
+      {/* Painel de Status de Segurança */}
+      <SafetyStatusPanel 
+        status={status}
+        config={config}
+        lastSendTime={lastSendTime}
+      />
+
+      {/* Painel de Configurações de Segurança */}
+      <SafetyConfigPanel 
+        config={config}
+        onUpdateConfig={updateConfig}
+      />
     </div>
   );
 };
