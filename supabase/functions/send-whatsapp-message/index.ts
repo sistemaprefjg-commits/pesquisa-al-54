@@ -31,7 +31,7 @@ serve(async (req) => {
     const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`;
 
     // Enviar mensagem através da MegaAPI
-    const megaApiUrl = `https://${megaApiHost}/message/sendText/${megaApiInstanceKey}`;
+    const megaApiUrl = `https://${megaApiHost}/api/message/sendText/${megaApiInstanceKey}`;
     
     const megaApiResponse = await fetch(megaApiUrl, {
       method: 'POST',
