@@ -27,79 +27,114 @@ serve(async (req) => {
     console.log('Enviando mensagem via MegaAPI:', { phone, patientName });
 
     // Formatar número para padrão brasileiro
-    const formattedPhone = phone.replace(/\D/g, '');
+    const formattedPhone = String(phone || '').replace(/\D/g, '');
     const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`;
 
-    // Enviar mensagem através da MegaAPI (com tentativas de compatibilidade)
+    // ========== Tentativas de compatibilidade com diferentes variantes de MegaAPI ==========
+    const base = `https://${megaApiHost}`.replace(/\/$/, '');
+
     const endpoints = [
-      `https://${megaApiHost}/api/message/sendText/${megaApiInstanceKey}`,
-      `https://${megaApiHost}/message/sendText/${megaApiInstanceKey}`,
-      `https://${megaApiHost}/api/messages/sendText/${megaApiInstanceKey}`,
-      `https://${megaApiHost}/api/message/send-text/${megaApiInstanceKey}`,
-      `https://${megaApiHost}/api/v1/message/sendText/${megaApiInstanceKey}`,
+      `${base}/api/message/sendText/${megaApiInstanceKey}`,
+      `${base}/message/sendText/${megaApiInstanceKey}`,
+      `${base}/api/messages/sendText/${megaApiInstanceKey}`,
+      `${base}/api/message/send-text/${megaApiInstanceKey}`,
+      `${base}/api/v1/message/sendText/${megaApiInstanceKey}`,
+      // Estruturas onde o instanceId vem antes
+      `${base}/api/instance/${megaApiInstanceKey}/message/sendText`,
+      `${base}/api/instances/${megaApiInstanceKey}/message/sendText`,
+      `${base}/api/instances/${megaApiInstanceKey}/sendText`,
+      `${base}/api/${megaApiInstanceKey}/message/sendText`,
+      // Query params
+      `${base}/message/sendText?instanceKey=${megaApiInstanceKey}`,
+      `${base}/api/message/sendText?instanceKey=${megaApiInstanceKey}`,
+      `${base}/api/message/sendText?session=${megaApiInstanceKey}`,
     ];
 
-    const payloads = [
-      { number: phoneWithCountry, textMessage: { text: message } },
-      { number: phoneWithCountry, message },
+    const payloads: Array<{ [k: string]: unknown, _type?: string }> = [
+      { number: phoneWithCountry, textMessage: { text: message }, _type: 'textMessage.text' },
+      { number: phoneWithCountry, text: message, _type: 'text' },
+      { number: phoneWithCountry, message, _type: 'message' },
+      { number: phoneWithCountry, body: message, _type: 'body' },
+      { chatId: `${phoneWithCountry}@c.us`, text: message, _type: 'chatId.text' },
     ];
 
+    const headersVariants: Array<Record<string, string> & { _auth?: string }> = [
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${megaApiToken}`, _auth: 'Bearer' },
+      { 'Content-Type': 'application/json', 'Authorization': megaApiToken, _auth: 'Authorization-raw' },
+      { 'Content-Type': 'application/json', 'apikey': megaApiToken, _auth: 'apikey' },
+      { 'Content-Type': 'application/json', 'x-api-key': megaApiToken, _auth: 'x-api-key' },
+      { 'Content-Type': 'application/json', 'token': megaApiToken, _auth: 'token' },
+    ];
+
+    let finalOk = false;
     let megaApiResponse: Response | null = null;
     let megaApiResult: any = null;
     let endpointUsed: string | null = null;
-    let payloadUsed: 'textMessage' | 'message' | null = null;
+    let payloadUsed: string | null = null;
+    let authUsed: string | null = null;
 
+    // Realiza múltiplas tentativas com diferentes combinações
     for (const url of endpoints) {
-      for (const body of payloads) {
-        console.log('Tentando envio MegaAPI', { url, payloadType: body.textMessage ? 'textMessage' : 'message' });
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${megaApiToken}`,
-          },
-          body: JSON.stringify(body),
-        });
+      for (const headers of headersVariants) {
+        for (const body of payloads) {
+          console.log('Tentando envio MegaAPI', { url, auth: headers._auth, payload: body._type });
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify(body),
+            });
 
-        const json = await resp.json().catch(() => ({}));
-        console.log('Resposta tentativa MegaAPI:', { status: resp.status, ok: resp.ok, body: json });
+            const json = await resp.json().catch(() => ({}));
+            console.log('Resposta tentativa MegaAPI:', { status: resp.status, ok: resp.ok, json });
 
-        if (resp.ok) {
-          megaApiResponse = resp;
-          megaApiResult = json;
-          endpointUsed = url;
-          payloadUsed = body.textMessage ? 'textMessage' : 'message';
-          break;
+            const looksSuccessful = resp.ok && !json?.error && json?.statusCode !== 404 && json?.name !== 'NOT_FOUND';
+
+            if (looksSuccessful) {
+              finalOk = true;
+              megaApiResponse = resp;
+              megaApiResult = json;
+              endpointUsed = url;
+              payloadUsed = String(body._type);
+              authUsed = headers._auth || null;
+              break;
+            }
+          } catch (err) {
+            console.error('Falha ao chamar endpoint MegaAPI:', { url, err });
+          }
         }
+        if (finalOk) break;
       }
-      if (megaApiResponse?.ok) break;
+      if (finalOk) break;
     }
 
-    if (!megaApiResponse) {
-      // Última tentativa com o primeiro endpoint para expor erro
-      const fallbackUrl = endpoints[0];
-      megaApiResponse = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${megaApiToken}`,
-        },
-        body: JSON.stringify(payloads[0]),
-      });
-      megaApiResult = await megaApiResponse.json().catch(() => ({}));
-      endpointUsed = fallbackUrl;
-      payloadUsed = 'textMessage';
+    // Se nada funcionou, realiza uma tentativa final para log detalhado
+    if (!finalOk) {
+      const fallbackUrl = `${base}/api/message/sendText/${megaApiInstanceKey}`;
+      try {
+        megaApiResponse = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${megaApiToken}` },
+          body: JSON.stringify({ number: phoneWithCountry, textMessage: { text: message } }),
+        });
+        megaApiResult = await megaApiResponse.json().catch(() => ({}));
+        endpointUsed = fallbackUrl;
+        payloadUsed = 'textMessage.text';
+        authUsed = 'Bearer';
+      } catch (err) {
+        console.error('Falha na tentativa final MegaAPI:', { fallbackUrl, err });
+      }
     }
 
-    console.log('Resposta da MegaAPI (final):', { endpointUsed, payloadUsed, status: megaApiResponse.status, ok: megaApiResponse.ok, body: megaApiResult });
+    console.log('Resposta da MegaAPI (final):', { endpointUsed, payloadUsed, authUsed, status: megaApiResponse?.status, ok: megaApiResponse?.ok, body: megaApiResult });
 
     let status = 'pending';
-    const success = megaApiResponse.ok && !megaApiResult?.error && megaApiResult?.statusCode !== 404;
+    const success = Boolean(finalOk || (megaApiResponse && megaApiResponse.ok && !megaApiResult?.error && megaApiResult?.statusCode !== 404));
     if (success) {
       status = 'sent';
     } else {
       status = 'failed';
-      console.error('Erro na MegaAPI:', { endpointUsed, payloadUsed, body: megaApiResult });
+      console.error('Erro na MegaAPI:', { endpointUsed, payloadUsed, authUsed, body: megaApiResult });
     }
 
     // Registrar a mensagem no banco de dados
@@ -121,22 +156,23 @@ serve(async (req) => {
       console.error('Erro ao salvar no banco:', dbError);
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success,
       status,
       megaApiResponse: megaApiResult,
       phoneUsed: phoneWithCountry,
       endpointUsed,
-      payloadUsed
+      payloadUsed,
+      authUsed
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro no send-whatsapp-message:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
+    return new Response(JSON.stringify({
+      success: false,
+      error: error?.message || 'unknown_error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
