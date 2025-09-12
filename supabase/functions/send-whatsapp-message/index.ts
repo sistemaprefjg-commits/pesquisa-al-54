@@ -24,11 +24,18 @@ serve(async (req) => {
   try {
     const { phone, message, patientName, userId } = await req.json();
 
-    console.log('Enviando mensagem via MegaAPI:', { phone, patientName });
+    console.log('Enviando mensagem via MegaAPI:', { phone, patientName, message });
+    console.log('Dados da instância:', { 
+      host: megaApiHost, 
+      instanceKey: megaApiInstanceKey, 
+      tokenLength: megaApiToken?.length 
+    });
 
     // Formatar número para padrão brasileiro
     const formattedPhone = String(phone || '').replace(/\D/g, '');
     const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`;
+    
+    console.log('Telefone formatado:', { original: phone, formatted: phoneWithCountry });
 
     // ========== Tentativas de compatibilidade com diferentes variantes de MegaAPI ==========
     const base = `https://${megaApiHost}`.replace(/\/$/, '');
