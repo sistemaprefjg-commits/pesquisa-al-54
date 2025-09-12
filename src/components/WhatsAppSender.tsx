@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,15 +8,10 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageSquare, Copy, Link as LinkIcon, User, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWhatsAppSafety } from "@/hooks/useWhatsAppSafety";
-import SafetyStatusPanel from "@/components/SafetyStatusPanel";
-import SafetyConfigPanel from "@/components/SafetyConfigPanel";
 
 const WhatsAppSender = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { config, status, lastSendTime, updateConfig, getRandomTemplate, calculateOptimalDelay } = useWhatsAppSafety();
-  
   const [patientData, setPatientData] = useState({
     name: "",
     phone: "",
@@ -25,31 +20,11 @@ const WhatsAppSender = () => {
   const [isEditingMessage, setIsEditingMessage] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<any>(null);
 
   // URL do formulário de pesquisa
   const surveyUrl = `${window.location.origin}/formulario`;
 
-  // Carrega um template aleatório ao mudar o nome
-  useEffect(() => {
-    const loadTemplate = async () => {
-      const template = await getRandomTemplate();
-      setCurrentTemplate(template);
-    };
-    
-    if (patientData.name) {
-      loadTemplate();
-    }
-  }, [patientData.name]);
-
-  const generateMessage = (name: string, useTemplate: boolean = true) => {
-    if (useTemplate && currentTemplate) {
-      return currentTemplate.template_text
-        .replace(/{name}/g, name || 'cidadão')
-        .replace(/{survey_url}/g, surveyUrl);
-    }
-    
-    // Fallback para mensagem padrão
+  const generateMessage = (name: string) => {
     return `Olá ${name || 'cidadão'}! 👋
 
 Sua opinião é importante para melhorarmos. Responda nossa pesquisa de satisfação após o seu atendimento:
@@ -89,7 +64,7 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     });
   };
 
-  const logWhatsAppMessage = async (phone: string, message: string, name: string, templateId?: string, delayApplied?: number) => {
+  const logWhatsAppMessage = async (phone: string, message: string, name: string) => {
     try {
       await supabase
         .from('whatsapp_messages')
@@ -98,17 +73,14 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
           message,
           patient_name: name,
           status: 'sent',
-          sent_by: user?.id,
-          template_used_id: templateId,
-          delay_applied_seconds: delayApplied ? Math.floor(delayApplied / 1000) : 0,
-          safety_status: status.canSend ? 'normal' : 'delayed'
+          sent_by: user?.id
         });
     } catch (error) {
       console.error('Error logging WhatsApp message:', error);
     }
   };
 
-  const sendViaMegaAPI = async () => {
+  const sendViaWhatsAppWeb = async () => {
     if (!patientData.phone) {
       toast({
         title: "Erro",
@@ -118,73 +90,49 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
       return;
     }
 
-    // Verifica se pode enviar (controle de segurança)
-    if (!status.canSend) {
+    setIsSending(true);
+    const finalMessage = getCurrentMessage();
+    
+    // Limitar o tamanho da mensagem para evitar bloqueios
+    const maxLength = 1000;
+    const truncatedMessage = finalMessage.length > maxLength 
+      ? finalMessage.substring(0, maxLength) + '...' 
+      : finalMessage;
+    
+    const encodedMessage = encodeURIComponent(truncatedMessage);
+    const phone = patientData.phone.replace(/\D/g, '');
+    
+    // Adicionar código do país se não estiver presente
+    const fullPhone = phone.startsWith('55') ? phone : `55${phone}`;
+    
+    const whatsappUrl = `https://wa.me/${fullPhone}?text=${encodedMessage}`;
+    
+    // Verificar se a URL não está muito longa
+    if (whatsappUrl.length > 2000) {
       toast({
-        title: "Envio bloqueado",
-        description: status.statusMessage,
+        title: "Mensagem muito longa",
+        description: "Por favor, reduza o tamanho da mensagem.",
         variant: "destructive",
       });
+      setIsSending(false);
       return;
     }
-
-    setIsSending(true);
     
-    // Aplica delay inteligente se necessário
-    const delayMs = calculateOptimalDelay();
-    if (delayMs > 120000) { // Só mostra se delay > 2min
-      toast({
-        title: "Aguardando delay de segurança",
-        description: `Enviando em ${Math.floor(delayMs / 60000)}min ${Math.floor((delayMs % 60000) / 1000)}s`,
-      });
-    }
+    // Registrar o envio no banco
+    await logWhatsAppMessage(fullPhone, truncatedMessage, patientData.name);
     
-    setTimeout(async () => {
-      try {
-        const finalMessage = getCurrentMessage();
-        
-        // Enviar mensagem via MegaAPI
-        const response = await supabase.functions.invoke('send-whatsapp-message', {
-          body: {
-            phone: patientData.phone,
-            message: finalMessage,
-            patientName: patientData.name,
-            userId: user?.id
-          }
-        });
+    window.open(whatsappUrl, '_blank');
+    
+    toast({
+      title: "WhatsApp Aberto!",
+      description: "A mensagem foi preparada. Clique em enviar no WhatsApp.",
+    });
 
-        if (response.error) {
-          throw new Error(response.error.message);
-        }
-
-        const result = response.data;
-        
-        if (result.success) {
-          toast({
-            title: "Mensagem Enviada!",
-            description: `Mensagem enviada com sucesso para ${patientData.name} (${result.phoneUsed})`,
-          });
-        } else {
-          throw new Error(result.error || 'Erro ao enviar mensagem');
-        }
-
-        // Limpar formulário após envio
-        setPatientData({ name: "", phone: "", additionalMessage: "" });
-        setCustomMessage("");
-        setIsEditingMessage(false);
-        setCurrentTemplate(null);
-        
-      } catch (error) {
-        console.error('Erro ao enviar mensagem:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao enviar mensagem via API",
-          variant: "destructive",
-        });
-      } finally {
-        setIsSending(false);
-      }
-    }, delayMs > 120000 ? delayMs : 0); // Só aplica delay se > 2min, senão envia imediatamente
+    // Limpar formulário após envio
+    setPatientData({ name: "", phone: "", additionalMessage: "" });
+    setCustomMessage("");
+    setIsEditingMessage(false);
+    setIsSending(false);
   };
 
   return (
@@ -293,31 +241,29 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
         </CardContent>
       </Card>
 
-      {/* MegaAPI Sender */}
+      {/* WhatsApp Web Sender */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-success" />
-            Enviar via API
+            Enviar via WhatsApp
           </CardTitle>
           <CardDescription>
-            Envia a mensagem diretamente através da MegaAPI
+            Abre o WhatsApp Web com a mensagem e link do formulário preparados
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button 
-            onClick={sendViaMegaAPI}
+            onClick={sendViaWhatsAppWeb}
             className="w-full"
             size="lg"
-            disabled={!patientData.phone || isSending || !status.canSend}
+            disabled={!patientData.phone || isSending}
           >
             <MessageSquare className="h-4 w-4 mr-2" />
-            {isSending ? 'Enviando...' : 
-             !status.canSend ? 'Aguarde para enviar' : 
-             'Enviar via API'}
+            {isSending ? 'Preparando...' : 'Enviar para WhatsApp'}
           </Button>
           <p className="text-xs text-muted-foreground mt-2">
-            * Mensagem será enviada diretamente via MegaAPI
+            * Certifique-se de estar logado no WhatsApp Web
           </p>
         </CardContent>
       </Card>
@@ -334,38 +280,23 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Preencha o nome e telefone da pessoa</li>
                 <li>• Adicione uma mensagem personalizada se desejar</li>
-                <li>• Clique em "Enviar via API"</li>
-                <li>• A mensagem será enviada diretamente pela MegaAPI</li>
-                <li>• Aguarde a confirmação de entrega</li>
+                <li>• Clique em "Enviar para WhatsApp"</li>
+                <li>• O WhatsApp Web abrirá com a mensagem pronta</li>
+                <li>• Clique em enviar no WhatsApp para finalizar</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium text-sm mb-2">Modo Seguro Ativo:</h4>
+              <h4 className="font-medium text-sm mb-2">Para evitar bloqueios:</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• ✅ Controle automático de limites por hora/dia</li>
-                <li>• ✅ Delays inteligentes entre envios</li>
-                <li>• ✅ Rotação automática de mensagens</li>
-                <li>• ✅ Modo aquecimento para números novos</li>
-                <li>• ✅ Monitoramento em tempo real</li>
-                <li>• 🛡️ <strong>Proteção contra banimentos</strong></li>
+                <li>• Evite enviar muitas mensagens seguidas</li>
+                <li>• Personalize as mensagens quando possível</li>
+                <li>• Aguarde alguns segundos entre envios</li>
+                <li>• Certifique-se de ter permissão da pessoa</li>
               </ul>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Painel de Status de Segurança */}
-      <SafetyStatusPanel 
-        status={status}
-        config={config}
-        lastSendTime={lastSendTime}
-      />
-
-      {/* Painel de Configurações de Segurança */}
-      <SafetyConfigPanel 
-        config={config}
-        onUpdateConfig={updateConfig}
-      />
     </div>
   );
 };
