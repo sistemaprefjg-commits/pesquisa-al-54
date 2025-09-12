@@ -36,7 +36,7 @@ export const useWhatsAppSafety = () => {
     nextSendTime: null,
     messagesThisHour: 0,
     messagesThisDay: 0,
-    statusMessage: '🟢 Modo Seguro Ativo',
+    statusMessage: '🟢 Modo Teste - Envio Liberado',
     statusType: 'safe'
   });
 
@@ -139,14 +139,19 @@ export const useWhatsAppSafety = () => {
     const now = new Date();
     let canSend = true;
     let nextSendTime: Date | null = null;
-    let statusMessage = '🟢 Modo Seguro Ativo';
+    let statusMessage = '🟢 Liberado para teste';
     let statusType: 'safe' | 'warning' | 'blocked' = 'safe';
 
-    // Verifica limite diário
-    const dailyLimit = config.warming_mode ? config.daily_warming_limit : config.max_messages_per_day;
-    if (messagesThisDay >= dailyLimit) {
+    // MODO TESTE - sempre permitir envio
+    if (config.min_delay_minutes === 0) {
+      canSend = true;
+      statusMessage = '🟢 Modo Teste - Envio Liberado';
+      statusType = 'safe';
+    }
+    // Verifica limite diário (apenas se não estiver em modo teste)
+    else if (messagesThisDay >= (config.warming_mode ? config.daily_warming_limit : config.max_messages_per_day)) {
       canSend = false;
-      statusMessage = `🛑 Limite diário atingido (${messagesThisDay}/${dailyLimit})`;
+      statusMessage = `🛑 Limite diário atingido (${messagesThisDay}/${config.warming_mode ? config.daily_warming_limit : config.max_messages_per_day})`;
       statusType = 'blocked';
     }
     // Verifica limite por hora
@@ -157,8 +162,8 @@ export const useWhatsAppSafety = () => {
       statusMessage = `⏰ Limite/hora atingido. Próximo envio: ${nextHour.toLocaleTimeString()}`;
       statusType = 'blocked';
     }
-    // Verifica delay entre envios
-    else if (lastSentAt) {
+    // Verifica delay entre envios (apenas se não estiver em modo teste)
+    else if (lastSentAt && config.min_delay_minutes > 0) {
       const lastSent = new Date(lastSentAt);
       const minDelayMs = config.min_delay_minutes * 60 * 1000;
       const nextAllowedTime = new Date(lastSent.getTime() + minDelayMs);
@@ -174,22 +179,11 @@ export const useWhatsAppSafety = () => {
       }
     }
 
-    // Avisos preventivos
-    if (canSend) {
-      if (messagesThisHour >= config.max_messages_per_hour * 0.8) {
-        statusMessage = `⚠️ ${messagesThisHour}/${config.max_messages_per_hour} msgs/hora - diminua o ritmo`;
-        statusType = 'warning';
-      } else if (messagesThisDay >= dailyLimit * 0.8) {
-        statusMessage = `⚠️ ${messagesThisDay}/${dailyLimit} msgs hoje - cuidado com o limite`;
-        statusType = 'warning';
-      }
-    }
-
     setStatus({
       canSend,
       nextSendTime,
       messagesThisHour,
-      messagesThisDay: messagesThisDay,
+      messagesThisDay,
       statusMessage,
       statusType
     });
