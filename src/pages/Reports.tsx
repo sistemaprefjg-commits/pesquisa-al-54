@@ -257,7 +257,8 @@ const Reports = () => {
       date: response.created_at,
       rating: response.satisfaction_score || 3,
       complaints: (response.responses && response.responses.comentarios) || '',
-      suggestions: (response.responses && response.responses.sugestoes) || ''
+      suggestions: (response.responses && response.responses.sugestoes) || '',
+      neighborhood: (response.responses && response.responses.bairro) || ''
     }));
 
   // Paginação
@@ -839,6 +840,7 @@ const Reports = () => {
                     <TableHead className="min-w-[120px]">Paciente</TableHead>
                     <TableHead className="min-w-[140px]">Data e Hora</TableHead>
                     <TableHead className="min-w-[100px]">Avaliação</TableHead>
+                    <TableHead className="min-w-[120px]">Bairro</TableHead>
                     <TableHead className="min-w-[200px]">Reclamações</TableHead>
                     <TableHead className="min-w-[200px]">Sugestões</TableHead>
                   </TableRow>
@@ -867,6 +869,15 @@ const Reports = () => {
                         <span className="ml-2 text-sm text-muted-foreground">
                           {response.rating}/5
                         </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {response.neighborhood ? (
+                          <span className="text-foreground">{response.neighborhood}</span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Não informado</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="max-w-xs">
