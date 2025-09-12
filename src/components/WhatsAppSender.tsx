@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Copy, Link as LinkIcon, User, Edit } from "lucide-react";
+import { MessageSquare, Copy, Link as LinkIcon, User, Edit, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -21,6 +22,7 @@ const WhatsAppSender = () => {
   const [customMessage, setCustomMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [messageVariationIndex, setMessageVariationIndex] = useState(0);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   // URL do formulário de pesquisa
   const surveyUrl = `${window.location.origin}/formulario`;
@@ -162,11 +164,17 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     // Registrar o envio no banco
     await logWhatsAppMessage(fullPhone, truncatedMessage, patientData.name);
     
-    window.open(whatsappUrl, '_blank');
+    // Abrir WhatsApp integrado no modal
+    setShowWhatsAppModal(true);
+    
+    // Aguardar um pouco e então abrir a URL do WhatsApp
+    setTimeout(() => {
+      window.open(whatsappUrl, '_blank');
+    }, 1000);
     
     toast({
-      title: "WhatsApp Aberto!",
-      description: "A mensagem foi preparada. Clique em enviar no WhatsApp.",
+      title: "WhatsApp Integrado Aberto!",
+      description: "Use o WhatsApp Web integrado ou a nova aba que foi aberta.",
     });
 
     // Limpar formulário após envio
@@ -177,6 +185,10 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
     
     // Rotacionar para próxima variação de mensagem
     setMessageVariationIndex((prev) => (prev + 1) % messageVariations.length);
+  };
+
+  const openIntegratedWhatsApp = () => {
+    setShowWhatsAppModal(true);
   };
 
   return (
@@ -297,15 +309,26 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            onClick={sendViaWhatsAppWeb}
-            className="w-full"
-            size="lg"
-            disabled={!patientData.phone || isSending}
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {isSending ? 'Preparando...' : 'Enviar para WhatsApp'}
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button 
+              onClick={sendViaWhatsAppWeb}
+              className="w-full"
+              size="lg"
+              disabled={!patientData.phone || isSending}
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {isSending ? 'Preparando...' : 'Enviar para WhatsApp'}
+            </Button>
+            <Button 
+              onClick={openIntegratedWhatsApp}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              WhatsApp Integrado
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground mt-2">
             * Certifique-se de estar logado no WhatsApp Web
           </p>
@@ -341,6 +364,38 @@ Hospital Municipal Ana Anita Gomes Fragoso`;
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Web Integrado - Modal */}
+      <Dialog open={showWhatsAppModal} onOpenChange={setShowWhatsAppModal}>
+        <DialogContent className="max-w-6xl h-[80vh] p-0">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-success" />
+                WhatsApp Web Integrado
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowWhatsAppModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+            <DialogDescription>
+              Use o WhatsApp Web diretamente no sistema. Escaneie o QR code se necessário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 p-4 pt-0">
+            <iframe
+              src="https://web.whatsapp.com"
+              className="w-full h-full border-0 rounded-lg"
+              title="WhatsApp Web"
+              allow="camera; microphone"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
