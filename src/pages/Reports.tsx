@@ -419,52 +419,117 @@ const Reports = () => {
         }
       }
 
-      // Nova página para tabela de respostas
+      // Gerar tabela de respostas de forma programática
       pdf.addPage();
       currentY = 20;
-
-      const responseTableSection = document.querySelector('[data-pdf="responses-table-full"]') as HTMLElement;
-      if (responseTableSection) {
-        const canvas = await html2canvas(responseTableSection, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
-        });
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pageWidth - 40;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Respostas Recentes', 20, currentY);
+      currentY += 10;
+      
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      
+      const margin = 20;
+      const tableWidth = pageWidth - (margin * 2);
+      const colWidths = [35, 30, 20, 45, 40]; // Larguras das colunas
+      
+      // Cabeçalho da tabela
+      const headers = ['Paciente', 'Data/Hora', 'Nota', 'Comentários', 'Sugestões'];
+      let xPos = margin;
+      
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, currentY, tableWidth, 8, 'F');
+      
+      headers.forEach((header, idx) => {
+        pdf.text(header, xPos + 2, currentY + 5);
+        xPos += colWidths[idx];
+      });
+      
+      currentY += 8;
+      pdf.setFont('helvetica', 'normal');
+      
+      // Dados da tabela - processar em lotes pequenos
+      const responsesToShow = allRecentResponses.slice(0, 100); // Limitar a 100 respostas no PDF
+      
+      responsesToShow.forEach((response, index) => {
+        const rowHeight = 15; // Altura mínima da linha
         
-        if (imgHeight > pageHeight - 40) {
-          const pagesNeeded = Math.ceil(imgHeight / (pageHeight - 40));
-          const sectionHeight = (pageHeight - 40);
+        // Verificar se precisa de nova página
+        if (currentY + rowHeight > pageHeight - 20) {
+          pdf.addPage();
+          currentY = 20;
           
-          for (let i = 0; i < pagesNeeded; i++) {
-            if (i > 0) {
-              pdf.addPage();
-              currentY = 20;
-            }
-            
-            const yOffset = i * sectionHeight * (canvas.height / imgHeight);
-            const partialCanvas = document.createElement('canvas');
-            partialCanvas.width = canvas.width;
-            partialCanvas.height = Math.min(sectionHeight * (canvas.height / imgHeight), canvas.height - yOffset);
-            
-            const ctx = partialCanvas.getContext('2d');
-            ctx?.drawImage(canvas, 0, yOffset, canvas.width, partialCanvas.height, 0, 0, canvas.width, partialCanvas.height);
-            
-            const partialImgData = partialCanvas.toDataURL('image/png');
-            const partialImgHeight = (partialCanvas.height * imgWidth) / partialCanvas.width;
-            
-            pdf.addImage(partialImgData, 'PNG', 20, currentY, imgWidth, partialImgHeight);
-          }
-        } else {
-          pdf.addImage(imgData, 'PNG', 20, currentY, imgWidth, imgHeight);
+          // Repetir cabeçalho
+          xPos = margin;
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFillColor(240, 240, 240);
+          pdf.rect(margin, currentY, tableWidth, 8, 'F');
+          
+          headers.forEach((header, idx) => {
+            pdf.text(header, xPos + 2, currentY + 5);
+            xPos += colWidths[idx];
+          });
+          
+          currentY += 8;
+          pdf.setFont('helvetica', 'normal');
         }
+        
+        xPos = margin;
+        const startY = currentY;
+        
+        // Desenhar borda da linha
+        pdf.setDrawColor(220, 220, 220);
+        pdf.rect(margin, currentY, tableWidth, rowHeight);
+        
+        // Paciente
+        const patientText = pdf.splitTextToSize(response.patient || '', colWidths[0] - 4);
+        pdf.text(patientText[0] || '', xPos + 2, currentY + 5);
+        xPos += colWidths[0];
+        
+        // Data
+        const dateText = new Date(response.date).toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        pdf.text(dateText, xPos + 2, currentY + 5);
+        xPos += colWidths[1];
+        
+        // Nota
+        pdf.text(`${response.rating}/5`, xPos + 2, currentY + 5);
+        xPos += colWidths[2];
+        
+        // Comentários
+        const complaintsText = response.complaints 
+          ? pdf.splitTextToSize(response.complaints.substring(0, 100) + (response.complaints.length > 100 ? '...' : ''), colWidths[3] - 4)
+          : [''];
+        pdf.text(complaintsText[0] || '-', xPos + 2, currentY + 5);
+        xPos += colWidths[3];
+        
+        // Sugestões
+        const suggestionsText = response.suggestions 
+          ? pdf.splitTextToSize(response.suggestions.substring(0, 100) + (response.suggestions.length > 100 ? '...' : ''), colWidths[4] - 4)
+          : [''];
+        pdf.text(suggestionsText[0] || '-', xPos + 2, currentY + 5);
+        
+        currentY += rowHeight;
+      });
+      
+      // Nota de rodapé se houver mais respostas
+      if (allRecentResponses.length > 100) {
+        currentY += 10;
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text(`Mostrando as primeiras 100 respostas de ${allRecentResponses.length} no total`, margin, currentY);
       }
 
       // Salvar o PDF
-      pdf.save(`relatorio-satisfacao-${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`relatorio-satisfacao-${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Erro ao gerar PDF. Tente novamente.');
@@ -992,100 +1057,6 @@ const Reports = () => {
             </div>
           )}
         </Card>
-        
-        {/* Tabela oculta com todas as respostas para PDF */}
-        <div className="hidden" data-pdf="responses-table-full">
-          <Card>
-            <CardHeader>
-              <CardTitle>Todas as Respostas Recentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead>Data e Hora</TableHead>
-                    <TableHead>Avaliação</TableHead>
-                    <TableHead>Respostas do Questionário</TableHead>
-                    <TableHead>Comentários</TableHead>
-                    <TableHead>Sugestões</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allRecentResponses.map((response) => (
-                    <TableRow key={response.id}>
-                      <TableCell className="font-medium">{response.patient}</TableCell>
-                      <TableCell>{new Date(response.date).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < response.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {response.rating}/5
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm space-y-2">
-                          {response.responses && Object.keys(response.responses).length > 0 ? (
-                            Object.entries(response.responses)
-                              .filter(([key]) => key !== 'comentarios' && key !== 'sugestoes')
-                              .map(([question, answer], idx) => (
-                                <div key={idx} className="border-l-2 border-primary/30 pl-2">
-                                  <p className="font-medium text-xs text-muted-foreground mb-0.5">
-                                    {question}
-                                  </p>
-                                  <p className="text-foreground">
-                                    {String(answer)}
-                                  </p>
-                                </div>
-                              ))
-                          ) : (
-                            <span className="text-muted-foreground italic">Sem respostas</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {response.complaints ? (
-                            <div className="text-red-600 whitespace-pre-wrap break-words">
-                              {response.complaints}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground italic">Nenhum comentário</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {response.suggestions ? (
-                            <div className="text-green-600 whitespace-pre-wrap break-words">
-                              {response.suggestions}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground italic">Nenhuma sugestão</span>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
         </>
       )}
       </main>
