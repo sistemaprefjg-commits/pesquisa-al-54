@@ -423,7 +423,7 @@ const Reports = () => {
       pdf.addPage();
       currentY = 20;
 
-      const responseTableSection = document.querySelector('[data-pdf="responses-table"]') as HTMLElement;
+      const responseTableSection = document.querySelector('[data-pdf="responses-table-full"]') as HTMLElement;
       if (responseTableSection) {
         const canvas = await html2canvas(responseTableSection, {
           scale: 2,
@@ -992,6 +992,100 @@ const Reports = () => {
             </div>
           )}
         </Card>
+        
+        {/* Tabela oculta com todas as respostas para PDF */}
+        <div className="hidden" data-pdf="responses-table-full">
+          <Card>
+            <CardHeader>
+              <CardTitle>Todas as Respostas Recentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Paciente</TableHead>
+                    <TableHead>Data e Hora</TableHead>
+                    <TableHead>Avaliação</TableHead>
+                    <TableHead>Respostas do Questionário</TableHead>
+                    <TableHead>Comentários</TableHead>
+                    <TableHead>Sugestões</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allRecentResponses.map((response) => (
+                    <TableRow key={response.id}>
+                      <TableCell className="font-medium">{response.patient}</TableCell>
+                      <TableCell>{new Date(response.date).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < response.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            {response.rating}/5
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm space-y-2">
+                          {response.responses && Object.keys(response.responses).length > 0 ? (
+                            Object.entries(response.responses)
+                              .filter(([key]) => key !== 'comentarios' && key !== 'sugestoes')
+                              .map(([question, answer], idx) => (
+                                <div key={idx} className="border-l-2 border-primary/30 pl-2">
+                                  <p className="font-medium text-xs text-muted-foreground mb-0.5">
+                                    {question}
+                                  </p>
+                                  <p className="text-foreground">
+                                    {String(answer)}
+                                  </p>
+                                </div>
+                              ))
+                          ) : (
+                            <span className="text-muted-foreground italic">Sem respostas</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {response.complaints ? (
+                            <div className="text-red-600 whitespace-pre-wrap break-words">
+                              {response.complaints}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic">Nenhum comentário</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {response.suggestions ? (
+                            <div className="text-green-600 whitespace-pre-wrap break-words">
+                              {response.suggestions}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground italic">Nenhuma sugestão</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
         </>
       )}
       </main>
