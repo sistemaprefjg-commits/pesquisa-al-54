@@ -256,6 +256,7 @@ const Reports = () => {
       patient: response.patient_name,
       date: response.created_at,
       rating: response.satisfaction_score || 3,
+      responses: response.responses || {},
       complaints: (response.responses && response.responses.comentarios) || '',
       suggestions: (response.responses && response.responses.sugestoes) || ''
     }));
@@ -839,7 +840,8 @@ const Reports = () => {
                     <TableHead className="min-w-[120px]">Paciente</TableHead>
                     <TableHead className="min-w-[140px]">Data e Hora</TableHead>
                     <TableHead className="min-w-[100px]">Avaliação</TableHead>
-                    <TableHead className="min-w-[200px]">Reclamações</TableHead>
+                    <TableHead className="min-w-[250px]">Respostas do Questionário</TableHead>
+                    <TableHead className="min-w-[200px]">Comentários</TableHead>
                     <TableHead className="min-w-[200px]">Sugestões</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -869,6 +871,26 @@ const Reports = () => {
                         </span>
                       </div>
                     </TableCell>
+                    <TableCell className="max-w-md">
+                      <div className="text-sm space-y-2">
+                        {response.responses && Object.keys(response.responses).length > 0 ? (
+                          Object.entries(response.responses)
+                            .filter(([key]) => key !== 'comentarios' && key !== 'sugestoes')
+                            .map(([question, answer], idx) => (
+                              <div key={idx} className="border-l-2 border-primary/30 pl-2">
+                                <p className="font-medium text-xs text-muted-foreground mb-0.5">
+                                  {question}
+                                </p>
+                                <p className="text-foreground">
+                                  {String(answer)}
+                                </p>
+                              </div>
+                            ))
+                        ) : (
+                          <span className="text-muted-foreground italic">Sem respostas</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="text-sm">
                         {response.complaints ? (
@@ -876,7 +898,7 @@ const Reports = () => {
                             {response.complaints}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground italic">Nenhuma reclamação</span>
+                          <span className="text-muted-foreground italic">Nenhum comentário</span>
                         )}
                       </div>
                     </TableCell>
